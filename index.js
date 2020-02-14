@@ -32,8 +32,8 @@ app.listen(port, () => {
     console.log('App running on port ' + 3000 + '.')
     
     // Update sensor metadata every 8 hours
-    setInterval(db.updateSensorMetadata, 2880000)
+    setInterval(updm.updateSensorMetadata, 2880000)
 
     // Update database with new sensor data every 30 minutes
-    setInterval(db.updateSensorDataManual, 180000)
+    setInterval(upd.updateSensorDataManual, 180000)
 })

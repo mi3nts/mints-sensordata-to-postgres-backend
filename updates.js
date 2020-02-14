@@ -120,7 +120,15 @@ function processSensors(sensors) {
                             dataOffset['data_pm1'] = res.rows[0].col_offset_pm1
                         if(res.rows[0].col_offset_pm10 != null)
                             dataOffset['data_pm10'] = res.rows[0].col_offset_pm10
-
+                        // if(res.rows[0].col_offset_longitude != null)
+                        //     dataOffset['data_longitude'] = res.rows[0].col_offset_longitude
+                        // if(res.rows[0].col_offset_latitude != null)
+                        //     dataOffset['data_latitude'] = res.rows[0].col_offset_latitude
+                        // if(res.rows[0].col_offset_temperature != null)
+                        //     dataOffset['data_temperature'] = res.rows[0].col_offset_temperature
+                        // if(res.rows[0].col_offset_humidity != null)
+                        //     dataOffset['data_humidity'] = res.rows[0].col_offset_humidity
+                        
                         // Work in progress on making json parsing more efficient
                         // console.log(JSON.stringify(res.rows[0]))
                         // const stringifiedJSON = JSON.stringify(res.rows[0])
