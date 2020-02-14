@@ -7,6 +7,7 @@
 */
 const PSQL = require('pg').Pool
 const fs = require('fs')
+const mutil = require('./util.js')
 
 // Postgre connector object and connection information
 const psql = new PSQL({
@@ -16,6 +17,23 @@ const psql = new PSQL({
     password: '2wire609',
     port: 5432
 })
+
+///////////////////////////////////////////////////////////
+// -- Begin modification area -- //////////////////////////
+
+// Add more data columns here
+const dataColumns = [
+    "PM1",
+    "PM2_5",
+    "PM10",
+    "Latitude",
+    "Longitude",
+    "Humidity",
+    "Temperature"
+]
+
+// -- End modification area -- ////////////////////////////
+///////////////////////////////////////////////////////////
 
 /*
     Opens the directory ../sensorData and inserts a row for each sensor ID folder if it 
@@ -48,20 +66,12 @@ function updateColOffsets(response, sensor_id) {
     let monthLead = (dateToday.getMonth() + 1) < 10 ? '0' : ''
     let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dateToday.getDate()
 
-    //////////
+    // Setting the filename to open
     // For testing only - Comment out when used in production
     const fileName = 'sensorData/' + sensor_id + '/2020/01/31/MINTS_' + sensor_id + '_calibrated_UTC_2020_01_31.csv'
 
-    // Uncomment when used in production
-    // Gets the sensor data for today
-    /*
-    const fileName = 'sensorData/' 
-        // Main sensor path
-        + sensor_id + '/' + datePath 
-        // File itself
-        + '/MINTS_' + sensor_id + '_calibrated_UTC_' + dateToday.getFullYear() + '_' + monthLead + (dateToday.getMonth() + 1) + '_' + dateToday.getDate() + '.csv'
-    //*/
-    //////////
+    // Uncomment when ready
+    //const fileName = mutil.getSensorDataToday(sensor_id)
 
     fs.stat(fileName, function (error, stat) {
         if(error) console.log(error)
@@ -70,7 +80,9 @@ function updateColOffsets(response, sensor_id) {
             fs.open(fileName, 'r', function (error, fd) {
                 if(error) console.log(error)
                 else {
-                    var fileBuffer = Buffer.alloc(fileSize)     // Allocate buffer based on the number of bytes we'll read
+                    // Allocate buffer based on the number of bytes we'll read
+                    var fileBuffer = Buffer.alloc(fileSize)   
+
                     fs.read(fd, fileBuffer, 0, fileSize, 0, function(error, bytesRead, buffer) {
                         // Every single line in the file, although we are only focusing on one line only
                         var fileLines = fileBuffer.toString().split('\n')                   
@@ -84,12 +96,28 @@ function updateColOffsets(response, sensor_id) {
                             dataOffsets[dataHeaders[i]] = i
                         }
 
-                        var updateQuery = "UPDATE sensor_meta SET " 
-                            + "col_offset_pm1 = $1, col_offset_pm2_5 = $2, col_offset_pm10 = $3 "
-                            + "WHERE sensor_id = $4;"
+                        // Create dynamic, parameterized query that will set the respective column offset values
+                        //   based on what is specified in the dataColumns array
+                        var updateMetaQuery = "UPDATE sensor_meta SET "
+                        var paramNum = 1
+                        for(var i = 0; i < dataColumns.length; i++, paramNum++) {
+                            if(i == dataColumns.length - 1)
+                                updateMetaQuery += "col_offset_" + dataColumns[i].toLowerCase() + " = $" + paramNum + " "
+                            else updateMetaQuery += "col_offset_" + dataColumns[i].toLowerCase() + " = $" + paramNum + ", "
+                        }
+                        updateMetaQuery += "WHERE sensor_id = $" + paramNum
                         
-                        psql.query(updateQuery, [dataOffsets['PM1'], dataOffsets['PM2_5'], dataOffsets['PM10'], sensor_id], (err, res) => {
-                            console.log("Finished updating sensor metadata.")
+                        // Create the respective parameters array to match with the parameterized query created
+                        //   above
+                        var updateMetaQueryParams = []
+                        for(var i = 0; i < dataColumns.length; i++) {
+                            updateMetaQueryParams.push(dataOffsets[dataColumns[i]])    
+                        }
+                        updateMetaQueryParams.push(sensor_id)
+                        
+                        // Update the sensor metadata
+                        psql.query(updateMetaQuery, updateMetaQueryParams, (err, res) => {
+                            console.log("[" + (new Date()) + "]: Finished updating sensor metadata for sensor " + sensor_id)
                         })
                     })
                 }
@@ -98,9 +126,19 @@ function updateColOffsets(response, sensor_id) {
     })
 }
 
+const resetLargestReadToday = function () {
+    psql.query("UPDATE sensor_meta SET largest_read = 0;",
+        (error, res) => {
+            if(error)
+                console.log("ERROR: Unable to reset largest read for today: " + error.message)
+        }
+    )
+}
+
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files
 module.exports = {
-    updateSensorMetadata
+    updateSensorMetadata,
+    resetLargestReadToday
 }

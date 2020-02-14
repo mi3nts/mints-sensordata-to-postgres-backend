@@ -7,6 +7,7 @@
 */
 const PSQL = require('pg').Pool
 const fs = require('fs')
+const mutil = require('./util.js')
 
 // Postgre connector object and connection information
 const psql = new PSQL({
@@ -17,13 +18,27 @@ const psql = new PSQL({
     port: 5432
 })
 
+///////////////////////////////////////////////////////////
+// -- Begin modification area -- //////////////////////////
+
 // Data columns to look for and update
 const dataToUpdate = [
-    'data_pm2_5', 
-    'data_pm1', 
-    'data_pm10'
-    // Add additional entries if collecting more data
+    'pm2_5', 
+    'pm1', 
+    'pm10'
 ]
+
+// Common data columns to look for and update
+const dataToUpdateCommonParams = [
+    "latitude",
+    "longitude",
+    "temperature",
+    "humidity"
+]
+
+// -- End modification area -- ////////////////////////////
+///////////////////////////////////////////////////////////
+
 
 /*
     Manually update sensor data on REST API call
@@ -82,23 +97,12 @@ function processSensors(sensors) {
         const sensorID = sensors[i]
 
         // Setting the filename to open
-        //////////
         // For testing only - Comment out when used in production
-        // Static file retrieval
         const fileName = 'sensorData/' + sensorID + '/2020/01/31/MINTS_' + sensorID + '_calibrated_UTC_2020_01_31.csv'
 
-        // Uncomment when used in production
-        // Gets the sensor data for today
-        /*
-        const fileName = 'sensorData/' 
-            // Main sensor path
-            + sensorID + '/' + datePath 
-            // File itself
-            + '/MINTS_' + sensorID + '_calibrated_UTC_' + dateToday.getFullYear() + '_' + monthLead + (dateToday.getMonth() + 1) + '_' + dateToday.getDate() + '.csv'
-        //*/
-        //////////
+        // Uncomment when ready
+        //const fileName = mutil.getSensorDataToday(sensorID)
 
-        
         // Open file metadata (through stat) to get its file size
         fs.stat(fileName, function(error, stat) {
             const fileSize = stat.size
@@ -108,45 +112,27 @@ function processSensors(sensors) {
                 if (err) console.log(err.stack)
                 else {
                     var prevFileSize = 0, dataOffset = [];
+
                     // Ensure the query is not empty, set the previous file size
                     if(res != null && res.rows[0] != null) {
+
                         // Data that is always used from sensor_meta
                         if(res.rows[0].largest_read != null)
                             prevFileSize = res.rows[0].largest_read
-                        // If more data is retreived, add the .csv column offsets here
-                        if(res.rows[0].col_offset_pm2_5 != null)
-                            dataOffset['data_pm2_5'] = res.rows[0].col_offset_pm2_5
-                        if(res.rows[0].col_offset_pm1 != null)
-                            dataOffset['data_pm1'] = res.rows[0].col_offset_pm1
-                        if(res.rows[0].col_offset_pm10 != null)
-                            dataOffset['data_pm10'] = res.rows[0].col_offset_pm10
-                        // if(res.rows[0].col_offset_longitude != null)
-                        //     dataOffset['data_longitude'] = res.rows[0].col_offset_longitude
-                        // if(res.rows[0].col_offset_latitude != null)
-                        //     dataOffset['data_latitude'] = res.rows[0].col_offset_latitude
-                        // if(res.rows[0].col_offset_temperature != null)
-                        //     dataOffset['data_temperature'] = res.rows[0].col_offset_temperature
-                        // if(res.rows[0].col_offset_humidity != null)
-                        //     dataOffset['data_humidity'] = res.rows[0].col_offset_humidity
                         
-                        // Work in progress on making json parsing more efficient
-                        // console.log(JSON.stringify(res.rows[0]))
-                        // const stringifiedJSON = JSON.stringify(res.rows[0])
-                        // for(var i = 0; i < dataToUpdate.length; i++) {
-                        //     var offsetDataIndex = stringifiedJSON.indexOf("col_offset_" + dataToUpdate[i].substr(5))
-                        //     if(offsetDataIndex != 0) {
-                        //         var offsetColonIndex = stringifiedJSON.indexOf(":", offsetDataIndex)
-                        //         var offsetAfterIndex = stringifiedJSON.indexOf(",", offsetDataIndex)
-                        //         if(offsetAfterIndex == -1) {
-                        //             console.log("Data offset updated: " + dataToUpdate[i] + " with " 
-                        //                 + stringifiedJSON.substr(offsetColonIndex + 1))
-                        //         } else {
-                        //             console.log("Data offset updated: " + dataToUpdate[i] + " with " 
-                        //                 + stringifiedJSON.substr(offsetColonIndex + 1, (offsetAfterIndex - (offsetColonIndex + 1))))
-                        //         }
-                                
-                        //     }  
-                        // }
+                        // Assigning data column offsets
+                        for(var i = 0; i < dataToUpdate.length; i++) {
+                            if(res.rows[0]['col_offset_' + dataToUpdate[i].toLowerCase()] != null) {
+                                dataOffset[dataToUpdate[i]] = res.rows[0]['col_offset_' + dataToUpdate[i].toLowerCase()]
+                            }
+                        }
+
+                        // Assigning common data column offsets
+                        for(var i = 0; i < dataToUpdateCommonParams.length; i++) {
+                            if(res.rows[0]['col_offset_' + dataToUpdateCommonParams[i].toLowerCase()] != null) {
+                                dataOffset[dataToUpdateCommonParams[i]] = res.rows[0]['col_offset_' + dataToUpdateCommonParams[i].toLowerCase()]
+                            }
+                        }
                     }
                     openFile(fileName, fileSize, prevFileSize, sensorID, dataOffset)
                 }
@@ -166,16 +152,16 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
         else {
             const readLen = fileSize - prevFileSize         // Calculate the number of bytes to read
             const curFileOffset = prevFileSize              // Set the bytes to skip (skipping bytes already read previously)
-            var fileBuffer = Buffer.alloc(readLen)          // Allocate buffer based on the number of bytes we'll read
+            const fileBuffer = Buffer.alloc(readLen)          // Allocate buffer based on the number of bytes we'll read
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(error, bytesRead, buffer) {
-                var fileLines = fileBuffer.toString().split('\n')                   // Every single line in the file
+                const fileLines = buffer.toString().split('\n')                   // Every single line in the file
                 
                 // Data collection
                 for(var i = 1; i < fileLines.length; i++) {
-                    var lineParts = fileLines[i].split(',')
+                    const lineParts = fileLines[i].split(',')
                     if(lineParts[0] != null && lineParts[0] != '') {
+                        // Break the raw timestamp string into discernable parts so 
                         var timestampDateParts = lineParts[0].split(/[- :]/)
-                        //console.log(timestampDateParts)
                         var timestampDateObj = new Date(parseInt(timestampDateParts[0]),
                                                         parseInt(timestampDateParts[1]) - 1,
                                                         parseInt(timestampDateParts[2].split("T")[0]),
@@ -185,10 +171,34 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
                         
                         // Insert data into each main data tables
                         for(var j = 0; j < dataToUpdate.length; j++) {
-                            const dataInsertionQuery = "INSERT INTO " + dataToUpdate[j] + "(timestamp, sensor_id, value) VALUES ($1, $2, $3);"
-                            const colOffset = dataOffset[dataToUpdate[j]]
-                            psql.query(dataInsertionQuery, [timestampDateObj, sensor_id, lineParts[colOffset]], (err, res) => {
-                                if(err) console.log(err.message + ", data offset: " + colOffset)
+                            // Initialize query statement
+                            var dataInsertionQuery = "INSERT INTO data_" + dataToUpdate[j] + "(timestamp, sensor_id, value, "
+
+                            // Build remaining column parameters
+                            for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
+                                if(k == dataToUpdateCommonParams.length - 1)
+                                    dataInsertionQuery += dataToUpdateCommonParams[k]
+                                else dataInsertionQuery += dataToUpdateCommonParams[k] + ", "
+                            }
+                            dataInsertionQuery += ") VALUES ($1, $2, $3,"
+
+                            // Build remaining value parameters and insert them into the parameter array
+                            var dataInsertionQueryParams = [timestampDateObj, sensor_id, lineParts[dataOffset[dataToUpdate[j]]]]
+                            var paramNum = 4
+                            for(var k = 0; k < dataToUpdateCommonParams.length; k++, paramNum++) {
+                                if(k == dataToUpdateCommonParams.length - 1) {
+                                    dataInsertionQuery += "$" + paramNum
+                                    dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
+                                } else {
+                                    dataInsertionQuery += "$" + paramNum + ", "
+                                    dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
+                                }
+                            }
+                            dataInsertionQuery += ");"
+
+                            // Make insertion query
+                            psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
+                                if(err) console.log(err.message + " for sensor " + sensor_id)
                             })
                         }
                     }
@@ -199,7 +209,12 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
                     + " WHERE sensor_meta.sensor_id = $1;"
                 psql.query(metaUpdateQuery, [sensor_id, (prevFileSize + readLen)], (err, res) => {
                     if(err) console.log(err.message)
-                    else console.log("Updated sensor_id (" + sensor_id + ") with new largest read: " + (prevFileSize + readLen))
+                    else {
+                        // If no new data was read
+                        if(bytesRead == 0)
+                            console.log("[" + (new Date()) + "]: Sensor id " + sensor_id + " has no new data.")
+                        else console.log("[" + (new Date()) + "]: Updated sensor id " + sensor_id + " with new data.")
+                    }
                 })
             })
         }
