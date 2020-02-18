@@ -49,7 +49,7 @@ app.listen(port, () => {
     console.log('Server running on port ' + 3000 + '.')
     today = (new Date()).getDay()
     // Update database with new sensor data every 5 seconds
-    setInterval(mintsUpdateRoutine(), 5000)
+    setInterval(mintsUpdateRoutine, 5000)
 })
 
 /*
