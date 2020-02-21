@@ -1,7 +1,6 @@
 /bkup/*
 dbresetData.sql
 /node_modules/*
-package.json
-package-lock.json
+postgrescon.js
 /sensorData/*
 

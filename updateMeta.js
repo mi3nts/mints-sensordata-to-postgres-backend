@@ -6,16 +6,14 @@
       in postgre.
 */
 const PSQL = require('pg').Pool
+const pgcon = require('./postgrescon.js')
+
 const fs = require('fs')
 const mutil = require('./util.js')
 
 // Postgre connector object and connection information
 const psql = new PSQL({
-    user: 'vmadmin780',
-    host: 'localhost',
-    database: 'mints',
-    password: '2wire609',
-    port: 5432
+    connectionString: pgcon.PSQL_LOGIN
 })
 
 ///////////////////////////////////////////////////////////
@@ -39,29 +37,30 @@ const dataColumns = [
     Opens the directory ../sensorData and inserts a row for each sensor ID folder if it 
       doesn't already exist in the postgre database
 */
-const updateSensorMetadata = (request, response) => {
-    fs.readdir('sensorData', function(error, files) {
-        if(error) console.log(error)
-        else {
-            for(var i = 0; i < files.length; i++) {
-                const sensor_id = files[i]
-                psql.query("INSERT INTO sensor_meta(sensor_id) VALUES " + "(\'" + sensor_id + "\')" + " ON CONFLICT (sensor_id) DO NOTHING;",
-                    (error, res) => {
-                        updateColOffsets(response, sensor_id)
-                    }
-                )
+const updateSensorMetadata = () => {
+    if(psql == null)
+        console.log("The PSQL object is unavailable at this time.")
+    else {
+        fs.readdir('sensorData', function(err, files) {
+            if(err) console.log(mutil.getTimeHeader() + err.message)
+            else {
+                for(var i = 0; i < files.length; i++) {
+                    const sensor_id = files[i]
+                    psql.query("INSERT INTO sensor_meta(sensor_id) VALUES " + "(\'" + sensor_id + "\')" + " ON CONFLICT (sensor_id) DO NOTHING;",
+                        (error, res) => {
+                            updateColOffsets(sensor_id)
+                        }
+                    )
+                }
             }
-        }
-    })
-    response.json({
-        message: "Results are processing asynchronously"
-    })
+        })
+    }
 }
 
 /*
     Finds the positions of the column headers to look for and updates them
 */
-function updateColOffsets(response, sensor_id) {
+function updateColOffsets(sensor_id) {
     var dateToday = new Date()
     let monthLead = (dateToday.getMonth() + 1) < 10 ? '0' : ''
     let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dateToday.getDate()
@@ -73,17 +72,18 @@ function updateColOffsets(response, sensor_id) {
     // Uncomment when ready
     //const fileName = mutil.getSensorDataToday(sensor_id)
 
-    fs.stat(fileName, function (error, stat) {
-        if(error) console.log(error)
+    fs.stat(fileName, function (err, stat) {
+        if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
         else {
             const fileSize = stat.size
-            fs.open(fileName, 'r', function (error, fd) {
-                if(error) console.log(error)
+            fs.open(fileName, 'r', function (err, fd) {
+                if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
                 else {
                     // Allocate buffer based on the number of bytes we'll read
                     var fileBuffer = Buffer.alloc(fileSize)   
 
-                    fs.read(fd, fileBuffer, 0, fileSize, 0, function(error, bytesRead, buffer) {
+                    fs.read(fd, fileBuffer, 0, fileSize, 0, function(err, bytesRead, buffer) {
+                        if(err) console.log(mutil.getTimeHeader() + err.message)
                         // Every single line in the file, although we are only focusing on one line only
                         var fileLines = fileBuffer.toString().split('\n')                   
 
@@ -117,7 +117,8 @@ function updateColOffsets(response, sensor_id) {
                         
                         // Update the sensor metadata
                         psql.query(updateMetaQuery, updateMetaQueryParams, (err, res) => {
-                            console.log("[" + (new Date()) + "]: Finished updating sensor metadata for sensor " + sensor_id)
+                            if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                            console.log(mutil.getTimeSensorHeader(sensor_id) + "Finished updating sensor metadata")
                         })
                     })
                 }
@@ -127,12 +128,16 @@ function updateColOffsets(response, sensor_id) {
 }
 
 const resetLargestReadToday = function () {
-    psql.query("UPDATE sensor_meta SET largest_read = 0;",
-        (error, res) => {
-            if(error)
-                console.log("ERROR: Unable to reset largest read for today: " + error.message)
-        }
-    )
+    if(psql == null)
+        console.log("The PSQL object is unavailable at this time.")
+    else {
+        psql.query("UPDATE sensor_meta SET largest_read = 0;",
+            (error, res) => {
+                if(error)
+                    console.log("ERROR: Unable to reset largest read for today: " + error.message)
+            }
+        )
+    }
 }
 
 // Needed so functions can be imported in another script file 

@@ -6,16 +6,15 @@
     Most operations performed here are asynchronous.
 */
 const PSQL = require('pg').Pool
+const pgcon = require('./postgrescon.js')
+
 const fs = require('fs')
 const mutil = require('./util.js')
 
+
 // Postgre connector object and connection information
 const psql = new PSQL({
-    user: 'vmadmin780',
-    host: 'localhost',
-    database: 'mints',
-    password: '2wire609',
-    port: 5432
+    connectionString: pgcon.PSQL_LOGIN
 })
 
 ///////////////////////////////////////////////////////////
@@ -44,7 +43,8 @@ const dataToUpdateCommonParams = [
     Manually update sensor data on REST API call
 */
 const updateSensorDataManual = (request, response) => {
-    querySensorList()
+    if(psql == null) console.log("The PSQL object is unavailable at this time")
+    else querySensorList()
 
    // Output json response
    response.json({
@@ -56,7 +56,8 @@ const updateSensorDataManual = (request, response) => {
     Updates sensor data
 */
 const updateSensorData = function () {
-    querySensorList()
+    if(psql == null) console.log("The PSQL object is unavailable at this time")
+    else querySensorList()
 }
 
 /*
@@ -147,14 +148,17 @@ function processSensors(sensors) {
 */
 function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
     // Open file in read-only
-    fs.open(fileName, 'r', function(error, fd) {
-        if(error) console.log(error)
+    fs.open(fileName, 'r', function(err, fd) {
+        if(err) console.log(err.message)
         else {
             const readLen = fileSize - prevFileSize         // Calculate the number of bytes to read
             const curFileOffset = prevFileSize              // Set the bytes to skip (skipping bytes already read previously)
             const fileBuffer = Buffer.alloc(readLen)          // Allocate buffer based on the number of bytes we'll read
-            fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(error, bytesRead, buffer) {
-                const fileLines = buffer.toString().split('\n')                   // Every single line in the file
+            fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
+                if(err) console.log(err.message)
+
+                // Every single line in the file
+                const fileLines = buffer.toString().split('\n')                   
                 
                 // Data collection
                 for(var i = 1; i < fileLines.length; i++) {

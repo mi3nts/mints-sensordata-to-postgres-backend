@@ -13,6 +13,7 @@ const port = 3000
 const db = require('./queries.js')
 const upd = require('./updates.js')
 const updm = require('./updateMeta.js')
+const schedule = require('node-schedule');
 
 var today
 
@@ -43,29 +44,32 @@ app.get('/update', upd.updateSensorDataManual)          // Call to update sensor
 app.get('/update_meta', updm.updateSensorMetadata)      
 
 /*
-    Where the script begins as soon as "node index.js" is run
-*/
-app.listen(port, () => {
-    console.log('Server running on port ' + 3000 + '.')
-    today = (new Date()).getDay()
-    // Update database with new sensor data every 5 seconds
-    setInterval(mintsUpdateRoutine, 5000)
-})
-
-/*
     Routinely called "main" function for continuous operations
 */
-function mintsUpdateRoutine() {
+schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     // Get today's date (day of the week number)
-    var now = (new Date()).getDay()
+    var now = fireDate.getDay()
 
     // ----- IMPORTANT -----
     // If its a new day when this update routine is called then reset
     //   the largest read for today's sensor data file
     // If its a new day and this is not called, there may be serious inaccuracies in the database
-    if(now != today)
-        updm.resetLargestReadToday
+    if(now != today) {
+        updm.resetLargestReadToday()
+        now = today
+    }
     
     // Check for new sensor data and update the database
-    upd.updateSensorData
-}
+    upd.updateSensorData()
+});
+
+/*
+    Where the script begins as soon as "node index.js" is run
+*/
+app.listen(port, () => {
+    console.log('Server running on port ' + 3000 + '.')
+    
+    today = (new Date()).getDay()
+    updm.updateSensorMetadata()
+})
+

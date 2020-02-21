@@ -22,9 +22,18 @@ const getSensorDataToday = (sensor_id) => {
     return sensorDataFilePath + sensorDataFilename
 }
 
+const getTimeSensorHeader = (sensor_id) => {
+    return "[" + (new Date()) + ", " + sensor_id + "]: "
+}
+
+const getTimeHeader = () => {
+    return "[" + (new Date()) + "]: " 
+}
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files
 module.exports = {
-    getSensorDataToday
+    getSensorDataToday,
+    getTimeSensorHeader,
+    getTimeHeader
 }

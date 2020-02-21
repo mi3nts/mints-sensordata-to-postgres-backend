@@ -5,14 +5,11 @@
     Queries data from postgre
 */
 const PSQL = require('pg').Pool
+const pgcon = require('./postgrescon.js')
 
 // Postgre connector object and connection information
 const psql = new PSQL({
-    user: 'vmadmin780',
-    host: 'localhost',
-    database: 'mints',
-    password: '2wire609',
-    port: 5432
+    connectionString: pgcon.PSQL_LOGIN
 })
 
 /*
