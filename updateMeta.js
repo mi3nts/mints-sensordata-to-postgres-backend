@@ -61,10 +61,6 @@ const updateSensorMetadata = () => {
     Finds the positions of the column headers to look for and updates them
 */
 function updateColOffsets(sensor_id) {
-    var dateToday = new Date()
-    let monthLead = (dateToday.getMonth() + 1) < 10 ? '0' : ''
-    let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dateToday.getDate()
-
     // Setting the filename to open
     // For testing only - Comment out when used in production
     const fileName = 'sensorData/' + sensor_id + '/2020/01/31/MINTS_' + sensor_id + '_calibrated_UTC_2020_01_31.csv'
@@ -120,6 +116,11 @@ function updateColOffsets(sensor_id) {
                             if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
                             console.log(mutil.getTimeSensorHeader(sensor_id) + "Finished updating sensor metadata")
                         })
+
+                        // Close file to prevent memory leak
+                        fs.close(fd, function () {
+                            // Do nothing
+                        })
                     })
                 }
             })
@@ -135,6 +136,7 @@ const resetLargestReadToday = function () {
             (error, res) => {
                 if(error)
                     console.log("ERROR: Unable to reset largest read for today: " + error.message)
+                else console.log(mutil.getTimeHeader() + "Successfully reset largest file size read for all sensors.")
             }
         )
     }

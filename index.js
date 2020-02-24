@@ -67,7 +67,7 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     Where the script begins as soon as "node index.js" is run
 */
 app.listen(port, () => {
-    console.log('Server running on port ' + 3000 + '.')
+    console.log('Server running on port ' + port + '.')
     
     today = (new Date()).getDay()
     updm.updateSensorMetadata()

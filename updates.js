@@ -87,11 +87,6 @@ function querySensorList() {
       and prepares to send it to "openFile()" for processing
 */
 function processSensors(sensors) {
-    // Setup today's date
-    var dateToday = new Date()
-    let monthLead = (dateToday.getMonth() + 1) < 10 ? '0' : ''
-    let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dateToday.getDate()
-
     // For each sensor
     for(var i = 0; i < sensors.length; i++) {
         // Since operations from here are asynchronous, use const to ensure the sensor_id value stays fixed
@@ -153,7 +148,7 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
         else {
             const readLen = fileSize - prevFileSize         // Calculate the number of bytes to read
             const curFileOffset = prevFileSize              // Set the bytes to skip (skipping bytes already read previously)
-            const fileBuffer = Buffer.alloc(readLen)          // Allocate buffer based on the number of bytes we'll read
+            const fileBuffer = Buffer.alloc(readLen)        // Allocate buffer based on the number of bytes we'll read
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
                 if(err) console.log(err.message)
 
@@ -216,9 +211,14 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
                     else {
                         // If no new data was read
                         if(bytesRead == 0)
-                            console.log("[" + (new Date()) + "]: Sensor id " + sensor_id + " has no new data.")
-                        else console.log("[" + (new Date()) + "]: Updated sensor id " + sensor_id + " with new data.")
+                            console.log(mutil.getTimeSensorHeader(sensor_id) + "No new data.")
+                        else console.log(mutil.getTimeSensorHeader(sensor_id) + "Got new data and successfully inserted into database.")
                     }
+                })
+
+                // Close file to prevent memory leak
+                fs.close(fd, function () {
+                    // Do nothing
                 })
             })
         }
