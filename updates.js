@@ -94,10 +94,10 @@ function processSensors(sensors) {
 
         // Setting the filename to open
         // For testing only - Comment out when used in production
-        const fileName = 'sensorData/' + sensorID + '/2020/01/31/MINTS_' + sensorID + '_calibrated_UTC_2020_01_31.csv'
+        //const fileName = 'sensorData/' + sensorID + '/2020/01/31/MINTS_' + sensorID + '_calibrated_UTC_2020_01_31.csv'
 
         // Uncomment when ready
-        //const fileName = mutil.getSensorDataToday(sensorID)
+        const fileName = mutil.getSensorDataToday(sensorID)
 
         // Open file metadata (through stat) to get its file size
         fs.stat(fileName, function(error, stat) {

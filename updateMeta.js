@@ -10,6 +10,7 @@ const pgcon = require('./postgrescon.js')
 
 const fs = require('fs')
 const mutil = require('./util.js')
+const mcfg = require('./mconfig.js')
 
 // Postgre connector object and connection information
 const psql = new PSQL({
@@ -41,7 +42,7 @@ const updateSensorMetadata = () => {
     if(psql == null)
         console.log("The PSQL object is unavailable at this time.")
     else {
-        fs.readdir('sensorData', function(err, files) {
+        fs.readdir(mcfg.SENSOR_DIRECTORY, function(err, files) {
             if(err) console.log(mutil.getTimeHeader() + err.message)
             else {
                 for(var i = 0; i < files.length; i++) {
@@ -63,10 +64,10 @@ const updateSensorMetadata = () => {
 function updateColOffsets(sensor_id) {
     // Setting the filename to open
     // For testing only - Comment out when used in production
-    const fileName = 'sensorData/' + sensor_id + '/2020/01/31/MINTS_' + sensor_id + '_calibrated_UTC_2020_01_31.csv'
+    //const fileName = 'sensorData/' + sensor_id + '/2020/01/31/MINTS_' + sensor_id + '_calibrated_UTC_2020_01_31.csv'
 
     // Uncomment when ready
-    //const fileName = mutil.getSensorDataToday(sensor_id)
+    const fileName = mutil.getSensorDataToday(sensor_id)
 
     fs.stat(fileName, function (err, stat) {
         if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)

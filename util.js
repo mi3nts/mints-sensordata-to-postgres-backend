@@ -5,6 +5,8 @@
     Utility functions
 */
 
+const mcfg = require('./mconfig.js')
+
 /*
     Generates the filepath for today's sensor data
 */
@@ -15,7 +17,7 @@ const getSensorDataToday = (sensor_id) => {
     let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dateToday.getDate()
 
     // Generate the file path and file name
-    let sensorDataFilePath = 'sensorData/' + sensor_id + '/' + datePath + '/'
+    let sensorDataFilePath = mcfg.SENSOR_DIRECTORY + sensor_id + '/' + datePath + '/'
     let sensorDataFilename = 'MINTS_' + sensor_id + '_calibrated_UTC_' + dateToday.getFullYear() + '_' + monthLead + (dateToday.getMonth() + 1) + '_' + dateToday.getDate() + '.csv'
 
     // Return combined file path and file name
