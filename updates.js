@@ -147,6 +147,9 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
         if(err) console.log(err.message)
         else {
             const readLen = fileSize - prevFileSize         // Calculate the number of bytes to read
+            if(readLen < 0) {
+               readLen = 0
+            }
             const curFileOffset = prevFileSize              // Set the bytes to skip (skipping bytes already read previously)
             const fileBuffer = Buffer.alloc(readLen)        // Allocate buffer based on the number of bytes we'll read
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
