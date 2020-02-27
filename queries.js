@@ -32,9 +32,9 @@ const getSensorData = (request, response) => {
 
 const getLatestSensorData = (request, response) => {
     const getQuery = "SELECT data_pm1.timestamp, "
-            + "data_pm1.value, "
-            + "data_pm2_5.value, "
-            + "data_pm10.value, "
+            + "data_pm1.value as pm1, "
+            + "data_pm2_5.value as pm2_5, "
+            + "data_pm10.value as pm10, "
             + "data_pm1.temperature, "
             + "data_pm1.humidity "
             + "FROM data_pm1 "
