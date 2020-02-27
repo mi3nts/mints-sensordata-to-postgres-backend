@@ -68,6 +68,7 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
 */
 app.listen(port, () => {
     console.log('Server running on port ' + port + '.')
+    updm.resetLargestReadToday()
     
     today = (new Date()).getDay()
     updm.updateSensorMetadata()

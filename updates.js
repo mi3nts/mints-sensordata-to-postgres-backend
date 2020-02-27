@@ -146,10 +146,14 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
     fs.open(fileName, 'r', function(err, fd) {
         if(err) console.log(err.message)
         else {
-            const readLen = fileSize - prevFileSize         // Calculate the number of bytes to read
-            if(readLen < 0) {
-               readLen = 0
+            var readCalc = fileSize - prevFileSize          // Calculate the number of bytes to read
+            if(readCalc < 0) {                              // Temporary measure to deal with a negative result
+                console.log(mutil.getTimeSensorHeader(sensor_id) + "WARNING: Read size calculations resulted in a negative read (" + fileSize + " - " + prevFileSize + " = " + readCalc + ").\n"
+                    + "\t\t\t\tAs a temporary measure, the resulting read length is set to 0")
+                readCalc = 0
             }
+            const readLen = readCalc        
+
             const curFileOffset = prevFileSize              // Set the bytes to skip (skipping bytes already read previously)
             const fileBuffer = Buffer.alloc(readLen)        // Allocate buffer based on the number of bytes we'll read
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
