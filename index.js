@@ -2,6 +2,9 @@
     index.js
     MINTS-BACKEND
 
+    Only for continuous backend services not user interaction.
+    User interactable REST APIs are present for the purposes of debugging.
+    
     Main script file to be called from terminal.
     Where it all comes together
 */
@@ -33,7 +36,8 @@ app.use(function(req, res, next) {
 
 app.get('/', (request, response) => {
     response.json({
-        info: 'MINTS-BACKEND processing server for transferring sensor data from .csv files to postgreSQL database tables'
+        info: 'MINTS-BACKEND processing server for transferring sensor data from .csv files to postgreSQL database tables.' +
+            'This server instance is only for continuous operations.'
     })
 })
 
