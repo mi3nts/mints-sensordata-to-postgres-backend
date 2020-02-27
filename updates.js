@@ -101,38 +101,41 @@ function processSensors(sensors) {
 
         // Open file metadata (through stat) to get its file size
         fs.stat(fileName, function(error, stat) {
-            const fileSize = stat.size
-            // Query table for the last largest number of bytes read 
-            // (since we are assuming sensor data will be continually added to the .csv files)
-            psql.query("SELECT * FROM sensor_meta WHERE sensor_id = \'" + sensorID + "\';", (err, res) => {
-                if (err) console.log(err.stack)
-                else {
-                    var prevFileSize = 0, dataOffset = [];
+            if(error) console.log(error.message)
+            else {
+                const fileSize = stat.size
+                // Query table for the last largest number of bytes read 
+                // (since we are assuming sensor data will be continually added to the .csv files)
+                psql.query("SELECT * FROM sensor_meta WHERE sensor_id = \'" + sensorID + "\';", (err, res) => {
+                    if (err) console.log(err.stack)
+                    else {
+                        var prevFileSize = 0, dataOffset = [];
 
-                    // Ensure the query is not empty, set the previous file size
-                    if(res != null && res.rows[0] != null) {
+                        // Ensure the query is not empty, set the previous file size
+                        if(res != null && res.rows[0] != null) {
 
-                        // Data that is always used from sensor_meta
-                        if(res.rows[0].largest_read != null)
-                            prevFileSize = res.rows[0].largest_read
-                        
-                        // Assigning data column offsets
-                        for(var i = 0; i < dataToUpdate.length; i++) {
-                            if(res.rows[0]['col_offset_' + dataToUpdate[i].toLowerCase()] != null) {
-                                dataOffset[dataToUpdate[i]] = res.rows[0]['col_offset_' + dataToUpdate[i].toLowerCase()]
+                            // Data that is always used from sensor_meta
+                            if(res.rows[0].largest_read != null)
+                                prevFileSize = res.rows[0].largest_read
+                            
+                            // Assigning data column offsets
+                            for(var i = 0; i < dataToUpdate.length; i++) {
+                                if(res.rows[0]['col_offset_' + dataToUpdate[i].toLowerCase()] != null) {
+                                    dataOffset[dataToUpdate[i]] = res.rows[0]['col_offset_' + dataToUpdate[i].toLowerCase()]
+                                }
+                            }
+
+                            // Assigning common data column offsets
+                            for(var i = 0; i < dataToUpdateCommonParams.length; i++) {
+                                if(res.rows[0]['col_offset_' + dataToUpdateCommonParams[i].toLowerCase()] != null) {
+                                    dataOffset[dataToUpdateCommonParams[i]] = res.rows[0]['col_offset_' + dataToUpdateCommonParams[i].toLowerCase()]
+                                }
                             }
                         }
-
-                        // Assigning common data column offsets
-                        for(var i = 0; i < dataToUpdateCommonParams.length; i++) {
-                            if(res.rows[0]['col_offset_' + dataToUpdateCommonParams[i].toLowerCase()] != null) {
-                                dataOffset[dataToUpdateCommonParams[i]] = res.rows[0]['col_offset_' + dataToUpdateCommonParams[i].toLowerCase()]
-                            }
-                        }
+                        openFile(fileName, fileSize, prevFileSize, sensorID, dataOffset)
                     }
-                    openFile(fileName, fileSize, prevFileSize, sensorID, dataOffset)
-                }
-            })
+                })
+            }
         })
     }
 }
