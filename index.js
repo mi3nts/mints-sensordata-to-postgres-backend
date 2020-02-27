@@ -42,6 +42,9 @@ app.get('/data_pm1', db.getSensorData)
 app.get('/data_pm2_5', db.getSensorData)
 app.get('/data_pm10', db.getSensorData)
 
+app.get('/sensor_id_list', db.getListOfSensorIDs)
+app.get('/latest', db.getLatestSensorData)
+
 app.get('/update', upd.updateSensorDataManual)          // Call to update sensor data manually
 
 // Call to update sensor metadata. 
