@@ -24,6 +24,12 @@ app.use(
         extended: true
     })
 )
+// CORS configuration
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 
 app.get('/', (request, response) => {
     response.json({
@@ -35,6 +41,9 @@ app.get('/', (request, response) => {
 app.get('/data_pm1', db.getSensorData)
 app.get('/data_pm2_5', db.getSensorData)
 app.get('/data_pm10', db.getSensorData)
+
+app.get('/sensor_id_list', db.getListOfSensorIDs)
+app.get('/latest', db.getLatestSensorData)
 
 app.get('/update', upd.updateSensorDataManual)          // Call to update sensor data manually
 
