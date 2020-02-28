@@ -4,6 +4,9 @@
     
     Queries data from postgre
 */
+const pg = require('pg')
+pg.types.setTypeParser(1114, str => str);
+
 const PSQL = require('pg').Pool
 const pgcon = require('./postgrescon.js')
 
