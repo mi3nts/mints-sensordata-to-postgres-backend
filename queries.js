@@ -59,7 +59,13 @@ const getListOfSensorIDs = (request, response) => {
                 status: 500,
                 error: error.message
             })
-        } else response.status(200).json(results.rows)
+        } else {
+            var buffer = []
+            for(var i = 0; i < results.rows.length; i++) {
+                buffer.push(results.rows[i]['sensor_id'])
+            }
+            response.status(200).json(buffer)
+        }
     })
 }
 
