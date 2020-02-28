@@ -11,6 +11,14 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = 3010
 
+const PSQL = require('pg').Pool
+const pgcon = require('./postgrescon.js')
+
+// Postgre connector object and connection information
+const psql = new PSQL({
+    connectionString: pgcon.PSQL_LOGIN
+})
+
 const db = require('./queries.js')
 
 // Important setup procedure (probably to allow JSON returns and thus REST functionality)
@@ -46,5 +54,17 @@ app.get('/latest', db.getLatestSensorData)
 */
 app.listen(port, () => {
     console.log('Server running on port ' + port + '.')
+    generateLatestSensorIDDataRequests()
 })
 
+function generateLatestSensorIDDataRequests() {
+    // Queries sensor_meta for list of sensor_ids
+    psql.query("SELECT sensor_id FROM sensor_meta", (error, results) => {
+        if (error) console.log(error)
+        else {
+            for(var i = 0; i < results.rows.length; i++) {
+                app.get('/latest/' + results.rows[i].sensor_id.trim(), db.getLatestSensorDataForID)
+            }
+        }
+    })
+}
