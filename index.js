@@ -15,6 +15,8 @@ const upd = require('./updates.js')
 const updm = require('./updateMeta.js')
 const schedule = require('node-schedule');
 
+
+const mutil = require('./util.js')
 var today
 
 // Important setup procedure (probably to allow JSON returns and thus REST functionality)
@@ -64,8 +66,9 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     //   the largest read for today's sensor data file
     // If its a new day and this is not called, there may be serious inaccuracies in the database
     if(now != today) {
+        console.log(mutil.getTimeSensorHeader() + "Preparing to reset largest file size read (today: " + today + ", now: " + now + ")")
         updm.resetLargestReadToday()
-        now = today
+        today = now
     }
     
     // Check for new sensor data and update the database
