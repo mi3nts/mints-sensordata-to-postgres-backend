@@ -4,7 +4,7 @@
 
     Utility functions
 */
-
+const mailer = require('nodemailer')
 const mcfg = require('./mconfig.js')
 
 /*
@@ -32,11 +32,50 @@ const getTimeHeader = () => {
     return "[" + (new Date()) + "]: " 
 }
 
+const emailNotify = (message, priority) => {
+    var priorityHeader = ""
+    switch (priority) {
+        case 1:
+            priorityHeader = "[Info] "
+            break;
+        case 2:
+            priorityHeader = "[Warning] "
+            break;
+        case 3:
+            priorityHeader = "[Severe] "
+            break;
+        default:
+            break;
+    }
+
+    // create reusable transporter object using the default SMTP transport
+    let transporter = mailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true, // true for 465, false for other ports
+        auth: {
+            user: "780dev@gmail.com",
+            pass: "MXC708ASUS10"
+        }
+    });
+
+    // send mail with defined transport object
+    let info = transporter.sendMail({
+        from: "780dev@gmail.com", 
+        to: "780dev@gmail.com",
+        subject: priorityHeader + "mints-backend-notification", 
+        html: message 
+    });
+
+    console.log(getTimeHeader() + "An email has been sent regarding server status")
+}
+
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files
 module.exports = {
     getSensorDataToday,
     getTimeSensorHeader,
-    getTimeHeader
+    getTimeHeader,
+    emailNotify
 }
