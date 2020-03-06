@@ -14,11 +14,12 @@ const getSensorDataToday = (sensor_id) => {
     // Get today's date object and break it up to form a date path
     var dateToday = new Date()
     let monthLead = (dateToday.getMonth() + 1) < 10 ? '0' : ''
-    let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dateToday.getDate()
+    let dayLead = (dateToday.getDate() < 10) ? '0' : ''
+    let datePath = dateToday.getFullYear() + '/' + monthLead + (dateToday.getMonth() + 1) + '/' + dayLead + dateToday.getDate()
 
     // Generate the file path and file name
     let sensorDataFilePath = mcfg.SENSOR_DIRECTORY + sensor_id + '/' + datePath + '/'
-    let sensorDataFilename = 'MINTS_' + sensor_id + '_calibrated_UTC_' + dateToday.getFullYear() + '_' + monthLead + (dateToday.getMonth() + 1) + '_' + dateToday.getDate() + '.csv'
+    let sensorDataFilename = 'MINTS_' + sensor_id + '_calibrated_UTC_' + dateToday.getFullYear() + '_' + monthLead + (dateToday.getMonth() + 1) + '_' + dayLead + dateToday.getDate() + '.csv'
 
     // Return combined file path and file name
     return sensorDataFilePath + sensorDataFilename
