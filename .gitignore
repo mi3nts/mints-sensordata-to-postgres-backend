@@ -1,5 +1,4 @@
-/bkup/*
-dbresetData.sql
+/sql/dbresetData.sql
 /node_modules/*
 postgrescon.js
 /sensorData/*

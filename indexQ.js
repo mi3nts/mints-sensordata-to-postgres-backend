@@ -11,6 +11,9 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = 3010
 
+///////////////////////////////////////////////////////////////////////////////
+// Start copy /////////////////////////////////////////////////////////////////
+
 const PSQL = require('pg').Pool
 const pgcon = require('./postgrescon.js')
 
@@ -19,7 +22,10 @@ const psql = new PSQL({
     connectionString: pgcon.PSQL_LOGIN
 })
 
-const db = require('./queries.js')
+const db = require('./queries-air-sensors.js')
+
+// End copy ///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 // Important setup procedure (probably to allow JSON returns and thus REST functionality)
 app.use(bodyParser.json())
@@ -41,6 +47,9 @@ app.get('/', (request, response) => {
     })
 })
 
+///////////////////////////////////////////////////////////////////////////////
+// Start copy /////////////////////////////////////////////////////////////////
+
 // REST API calls
 app.get('/data_pm1', db.getSensorData)
 app.get('/data_pm2_5', db.getSensorData)
@@ -57,6 +66,9 @@ app.listen(port, () => {
     generateLatestSensorIDDataRequests()
 })
 
+/*
+    Generates the individual API requests for each sensor ID to get the latest data
+*/
 function generateLatestSensorIDDataRequests() {
     // Queries sensor_meta for list of sensor_ids
     psql.query("SELECT sensor_id FROM sensor_meta", (error, results) => {
@@ -68,3 +80,6 @@ function generateLatestSensorIDDataRequests() {
         }
     })
 }
+
+// End copy ///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
