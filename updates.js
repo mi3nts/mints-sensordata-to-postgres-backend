@@ -69,8 +69,10 @@ const updateSensorData = function () {
 function querySensorList() {
     // Queries sensor_meta for list of sensor_ids
     psql.query("SELECT sensor_id FROM sensor_meta", (error, results) => {
-        if (error) console.log(error)
-        else {
+        if (error) {
+            console.log(mutil.getTimeHeader() + error)
+            mutil.emailNotify(mutil.getTimeHeader() + error.message, 2)
+        } else {
             // Push the list of sensors into the array to pass on to the next function
             var sensorBuffer = []
             for(var i = 0; i < results.rows.length; i++) {
@@ -101,8 +103,10 @@ function processSensors(sensors) {
 
         // Open file metadata (through stat) to get its file size
         fs.stat(fileName, function(error, stat) {
-            if(error) console.log(error.message)
-            else {
+            if(error) {
+                console.log(mutil.getTimeSensorHeader(sensorID) + error.message)
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + error.message, 2)
+            } else {
                 const fileSize = stat.size
                 // Query table for the last largest number of bytes read 
                 // (since we are assuming sensor data will be continually added to the .csv files)
@@ -147,8 +151,10 @@ function processSensors(sensors) {
 function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
     // Open file in read-only
     fs.open(fileName, 'r', function(err, fd) {
-        if(err) console.log(err.message)
-        else {
+        if(err) {
+            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+        } else {
             var readCalc = fileSize - prevFileSize          // Calculate the number of bytes to read
             if(readCalc < 0) {                              // Temporary measure to deal with a negative result
                 console.log(mutil.getTimeSensorHeader(sensor_id) + "WARNING: Read size calculations resulted in a negative read (" + fileSize + " - " + prevFileSize + " = " + readCalc + ").\n"
@@ -160,76 +166,84 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
             const curFileOffset = prevFileSize              // Set the bytes to skip (skipping bytes already read previously)
             const fileBuffer = Buffer.alloc(readLen)        // Allocate buffer based on the number of bytes we'll read
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
-                if(err) console.log(err.message)
+                if(err) {
+                    console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                    mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                } else {
+                    // Every single line in the file
+                    const fileLines = buffer.toString().split('\n')                   
+                    
+                    // Data collection
+                    for(var i = 1; i < fileLines.length; i++) {
+                        const lineParts = fileLines[i].split(',')
+                        if(lineParts[0] != null && lineParts[0] != '') {
+                            // Break the raw timestamp string into discernable parts so 
+                            var timestampDateParts = lineParts[0].split(/[- :]/)
+                            var timestampDateObj = new Date(parseInt(timestampDateParts[0]),
+                                                            parseInt(timestampDateParts[1]) - 1,
+                                                            parseInt(timestampDateParts[2].split("T")[0]),
+                                                            parseInt(timestampDateParts[2].split("T")[1]),
+                                                            parseInt(timestampDateParts[3]),
+                                                            parseInt(timestampDateParts[4]))
+                            
+                            // Insert data into each main data tables
+                            for(var j = 0; j < dataToUpdate.length; j++) {
+                                // Initialize query statement
+                                var dataInsertionQuery = "INSERT INTO data_" + dataToUpdate[j] + "(timestamp, sensor_id, value, "
 
-                // Every single line in the file
-                const fileLines = buffer.toString().split('\n')                   
-                
-                // Data collection
-                for(var i = 1; i < fileLines.length; i++) {
-                    const lineParts = fileLines[i].split(',')
-                    if(lineParts[0] != null && lineParts[0] != '') {
-                        // Break the raw timestamp string into discernable parts so 
-                        var timestampDateParts = lineParts[0].split(/[- :]/)
-                        var timestampDateObj = new Date(parseInt(timestampDateParts[0]),
-                                                        parseInt(timestampDateParts[1]) - 1,
-                                                        parseInt(timestampDateParts[2].split("T")[0]),
-                                                        parseInt(timestampDateParts[2].split("T")[1]),
-                                                        parseInt(timestampDateParts[3]),
-                                                        parseInt(timestampDateParts[4]))
-                        
-                        // Insert data into each main data tables
-                        for(var j = 0; j < dataToUpdate.length; j++) {
-                            // Initialize query statement
-                            var dataInsertionQuery = "INSERT INTO data_" + dataToUpdate[j] + "(timestamp, sensor_id, value, "
-
-                            // Build remaining column parameters
-                            for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
-                                if(k == dataToUpdateCommonParams.length - 1)
-                                    dataInsertionQuery += dataToUpdateCommonParams[k]
-                                else dataInsertionQuery += dataToUpdateCommonParams[k] + ", "
-                            }
-                            dataInsertionQuery += ") VALUES ($1, $2, $3,"
-
-                            // Build remaining value parameters and insert them into the parameter array
-                            var dataInsertionQueryParams = [timestampDateObj, sensor_id, lineParts[dataOffset[dataToUpdate[j]]]]
-                            var paramNum = 4
-                            for(var k = 0; k < dataToUpdateCommonParams.length; k++, paramNum++) {
-                                if(k == dataToUpdateCommonParams.length - 1) {
-                                    dataInsertionQuery += "$" + paramNum
-                                    dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
-                                } else {
-                                    dataInsertionQuery += "$" + paramNum + ", "
-                                    dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
+                                // Build remaining column parameters
+                                for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
+                                    if(k == dataToUpdateCommonParams.length - 1)
+                                        dataInsertionQuery += dataToUpdateCommonParams[k]
+                                    else dataInsertionQuery += dataToUpdateCommonParams[k] + ", "
                                 }
-                            }
-                            dataInsertionQuery += ");"
+                                dataInsertionQuery += ") VALUES ($1, $2, $3,"
 
-                            // Make insertion query
-                            psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
-                                if(err) console.log(err.message + " for sensor " + sensor_id)
-                            })
+                                // Build remaining value parameters and insert them into the parameter array
+                                var dataInsertionQueryParams = [timestampDateObj, sensor_id, lineParts[dataOffset[dataToUpdate[j]]]]
+                                var paramNum = 4
+                                for(var k = 0; k < dataToUpdateCommonParams.length; k++, paramNum++) {
+                                    if(k == dataToUpdateCommonParams.length - 1) {
+                                        dataInsertionQuery += "$" + paramNum
+                                        dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
+                                    } else {
+                                        dataInsertionQuery += "$" + paramNum + ", "
+                                        dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
+                                    }
+                                }
+                                dataInsertionQuery += ");"
+
+                                // Make insertion query
+                                psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
+                                    if(err) {
+                                        console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                                    }
+                                })
+                            }
                         }
                     }
+
+                    // Update table for the largest amount of bytes read for today's sensor data file
+                    const metaUpdateQuery = "INSERT INTO sensor_meta(sensor_id, largest_read) VALUES ($1, $2) ON CONFLICT (sensor_id) DO UPDATE SET largest_read = $2"
+                        + " WHERE sensor_meta.sensor_id = $1;"
+                    psql.query(metaUpdateQuery, [sensor_id, (prevFileSize + readLen)], (err, res) => {
+                        if(err) {
+                            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                        } else {
+                            // If no new data was read
+                            if(bytesRead == 0)
+                                console.log(mutil.getTimeSensorHeader(sensor_id) + "No new data.")
+                            else console.log(mutil.getTimeSensorHeader(sensor_id) + "Got new data and successfully inserted into database.")
+                        }
+                    })
+
+                    // Close file to prevent memory leak
+                    fs.close(fd, function () {
+                        // Do nothing
+                    })
                 }
-
-                // Update table for the largest amount of bytes read for today's sensor data file
-                const metaUpdateQuery = "INSERT INTO sensor_meta(sensor_id, largest_read) VALUES ($1, $2) ON CONFLICT (sensor_id) DO UPDATE SET largest_read = $2"
-                    + " WHERE sensor_meta.sensor_id = $1;"
-                psql.query(metaUpdateQuery, [sensor_id, (prevFileSize + readLen)], (err, res) => {
-                    if(err) console.log(err.message)
-                    else {
-                        // If no new data was read
-                        if(bytesRead == 0)
-                            console.log(mutil.getTimeSensorHeader(sensor_id) + "No new data.")
-                        else console.log(mutil.getTimeSensorHeader(sensor_id) + "Got new data and successfully inserted into database.")
-                    }
-                })
-
-                // Close file to prevent memory leak
-                fs.close(fd, function () {
-                    // Do nothing
-                })
             })
         }
     })

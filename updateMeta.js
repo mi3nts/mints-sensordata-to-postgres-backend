@@ -43,8 +43,10 @@ const updateSensorMetadata = () => {
         console.log("The PSQL object is unavailable at this time.")
     else {
         fs.readdir(mcfg.SENSOR_DIRECTORY, function(err, files) {
-            if(err) console.log(mutil.getTimeHeader() + err.message)
-            else {
+            if(err) {
+                console.log(mutil.getTimeHeader() + err.message)
+                mutil.emailNotify(mutil.getTimeHeader() + err.message, 2)
+            } else {
                 for(var i = 0; i < files.length; i++) {
                     const sensor_id = files[i]
                     psql.query("INSERT INTO sensor_meta(sensor_id) VALUES " + "(\'" + sensor_id + "\')" + " ON CONFLICT (sensor_id) DO NOTHING;",
@@ -70,17 +72,24 @@ function updateColOffsets(sensor_id) {
     const fileName = mutil.getSensorDataToday(sensor_id)
 
     fs.stat(fileName, function (err, stat) {
-        if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-        else {
+        if(err) {
+            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+        } else {
             const fileSize = stat.size
             fs.open(fileName, 'r', function (err, fd) {
-                if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                else {
+                if(err) {
+                    console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                    mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                } else {
                     // Allocate buffer based on the number of bytes we'll read
                     var fileBuffer = Buffer.alloc(fileSize)   
 
                     fs.read(fd, fileBuffer, 0, fileSize, 0, function(err, bytesRead, buffer) {
-                        if(err) console.log(mutil.getTimeHeader() + err.message)
+                        if(err) {
+                            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                        } 
                         // Every single line in the file, although we are only focusing on one line only
                         var fileLines = fileBuffer.toString().split('\n')                   
 
@@ -114,7 +123,10 @@ function updateColOffsets(sensor_id) {
                         
                         // Update the sensor metadata
                         psql.query(updateMetaQuery, updateMetaQueryParams, (err, res) => {
-                            if(err) console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                            if(err) { 
+                                console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                            }
                             console.log(mutil.getTimeSensorHeader(sensor_id) + "Finished updating sensor metadata")
                         })
 

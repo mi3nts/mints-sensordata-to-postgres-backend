@@ -13,11 +13,9 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = 3000
 
-const db = require('./queries.js')
 const upd = require('./updates.js')
 const updm = require('./updateMeta.js')
-const schedule = require('node-schedule');
-
+const schedule = require('node-schedule')
 
 const mutil = require('./util.js')
 var today
@@ -29,12 +27,6 @@ app.use(
         extended: true
     })
 )
-// CORS configuration
-app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-});
 
 app.get('/', (request, response) => {
     response.json({
@@ -44,16 +36,10 @@ app.get('/', (request, response) => {
 })
 
 // REST API calls
-app.get('/data_pm1', db.getSensorData)
-app.get('/data_pm2_5', db.getSensorData)
-app.get('/data_pm10', db.getSensorData)
+// Call to update sensor data manually
+app.get('/update', upd.updateSensorDataManual)          
 
-app.get('/sensor_id_list', db.getListOfSensorIDs)
-app.get('/latest', db.getLatestSensorData)
-
-app.get('/update', upd.updateSensorDataManual)          // Call to update sensor data manually
-
-// Call to update sensor metadata. 
+// Call to update sensor metadata manually 
 // This needs to be done if a new sensor is added or if any of the column 
 //   headers in the .csv output changes position or name
 app.get('/update_meta', updm.updateSensorMetadata)      
@@ -84,6 +70,7 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
 */
 app.listen(port, () => {
     console.log('Server running on port ' + port + '.')
+    mutil.emailNotify("Sensor processing server has started.", 1)
     updm.resetLargestReadToday()
     
     today = (new Date()).getDay()

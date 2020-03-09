@@ -5,7 +5,15 @@
 	Contains configuration information such as directory paths.
 	Edit this depending on the installation environment and your needs.
 */
+
+// Main sensor directory path
 const SENSOR_DIRECTORY = '/home/teamlarylive/minstData/liveUpdate/results/'
+
+// Allows email notification of 
+const EMAIL_NOTIFICATION_ENABLE = true
+
+const EMAIL_NOTIFICATION_ADDRESS = "780devtest@gmail.com"
+const EMAIL_NOTIFICATION_PASS = "MXC708ASUS10"
 
 // All the data columns that are being collected from the .csv files
 const DATA_COLUMNS_ALL = [
@@ -36,5 +44,8 @@ const DATA_COLUMNS_COMMON_UPDATE = [
 ]
 
 module.exports = {
-	SENSOR_DIRECTORY
+    SENSOR_DIRECTORY,
+    EMAIL_NOTIFICATION_ENABLE,
+    EMAIL_NOTIFICATION_ADDRESS,
+    EMAIL_NOTIFICATION_PASS
 }

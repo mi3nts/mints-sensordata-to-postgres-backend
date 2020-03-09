@@ -33,6 +33,8 @@ const getTimeHeader = () => {
 }
 
 const emailNotify = (message, priority) => {
+    if(!mcfg.EMAIL_NOTIFICATION_ENABLE) return;
+
     var priorityHeader = ""
     switch (priority) {
         case 1:
@@ -54,15 +56,15 @@ const emailNotify = (message, priority) => {
         port: 465,
         secure: true, // true for 465, false for other ports
         auth: {
-            user: "780dev@gmail.com",
-            pass: "MXC708ASUS10"
+            user: mcfg.EMAIL_NOTIFICATION_ADDRESS,
+            pass: mcfg.EMAIL_NOTIFICATION_PASS
         }
     });
 
     // send mail with defined transport object
     let info = transporter.sendMail({
-        from: "780dev@gmail.com", 
-        to: "780dev@gmail.com",
+        from: mcfg.EMAIL_NOTIFICATION_ADDRESS, 
+        to: mcfg.EMAIL_NOTIFICATION_ADDRESS,
         subject: priorityHeader + "mints-backend-notification", 
         html: message 
     });
