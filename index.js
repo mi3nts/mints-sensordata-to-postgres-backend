@@ -8,6 +8,7 @@
     Main script file to be called from terminal.
     Where it all comes together
 */
+const process = require('process')
 const express = require('express')
 const bodyParser = require('body-parser')
 const app = express()
@@ -69,11 +70,33 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     Where the script begins as soon as "node index.js" is run
 */
 app.listen(port, () => {
-    console.log('Server running on port ' + port + '.')
-    mutil.emailNotify("Sensor processing server has started.", 1)
+    console.log(mutil.getTimeHeader() + 'Server running on port ' + port + '.')
+    mutil.emailNotify(mutil.getTimeHeader() + "Sensor processing server has started on port " + port + ".", 1)
     updm.resetLargestReadToday()
     
     today = (new Date()).getDay()
     updm.updateSensorMetadata()
 })
 
+/*
+    Notify for "normal" exit even though none exists right now and exit
+*/
+process.on('exit', function () {
+    mutil.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor processing server has stopped.", 0)
+})
+
+/*
+    Notify for manual shutdown and exit
+*/
+process.on('SIGINT', function () {
+    console.log(mutil.getTimeHeader() + 'Manual shutdown was performed.')
+    mutil.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor processing server has been manually stopped.", 2)
+});
+
+/*
+    Notify for uncaught exception and exit
+*/
+process.on('uncaughtException', function(err) {
+    console.log(mutil.getTimeHeader() + "UNCAUGHT EXCEPTION: " + err.stack)
+    mutil.emailNotify(mutil.getTimeHeader() + "UNCAUGHT EXCEPTION: " + err.message, 99)
+});
