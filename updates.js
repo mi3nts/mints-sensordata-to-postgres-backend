@@ -38,6 +38,7 @@ const dataToUpdateCommonParams = [
 // -- End modification area -- ////////////////////////////
 ///////////////////////////////////////////////////////////
 
+var missingFileError = false
 
 /*
     Manually update sensor data on REST API call
@@ -105,8 +106,18 @@ function processSensors(sensors) {
         fs.stat(fileName, function(error, stat) {
             if(error) {
                 console.log(mutil.getTimeSensorHeader(sensorID) + error.message)
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + error.message, 2)
+                
+                if(!missingFileError) {
+                    mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + error.message, 2)
+                    missingFileError = true;    // Set error flag the mail system does not get spammed
+                }
             } else {
+                // Reset error flag for email
+                if(missingFileError) {
+                    missingFileError = false;
+                    mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + "Missing file issue has been resolved", 1)
+                }
+
                 const fileSize = stat.size
                 // Query table for the last largest number of bytes read 
                 // (since we are assuming sensor data will be continually added to the .csv files)
