@@ -38,9 +38,9 @@ const dataToUpdateCommonParams = [
 // -- End modification area -- ////////////////////////////
 ///////////////////////////////////////////////////////////
 
-var missingFileError = false
-var fileOpenError = false
-var fileReadError = false
+var missingFileError = new Object
+var fileOpenError = new Object
+var fileReadError = new Object
 
 /*
     Manually update sensor data on REST API call
@@ -80,6 +80,14 @@ function querySensorList() {
             var sensorBuffer = []
             for(var i = 0; i < results.rows.length; i++) {
                 sensorBuffer.push(results.rows[i].sensor_id.trim())
+
+                // Set error flag instances
+                if(missingFileError[results.rows[i].sensor_id.trim()] == null)
+                    missingFileError[results.rows[i].sensor_id.trim()] = false
+                if(fileOpenError[results.rows[i].sensor_id.trim()] == null)
+                    fileOpenError[results.rows[i].sensor_id.trim()] = false
+                if(fileReadError[results.rows[i].sensor_id.trim()] == null)
+                    fileReadError[results.rows[i].sensor_id.trim()] = false
             }
             processSensors(sensorBuffer)
         }
@@ -109,15 +117,15 @@ function processSensors(sensors) {
             if(error) {
                 console.log(mutil.getTimeSensorHeader(sensorID) + "fs.stat: " + error.message)
                 
-                if(!missingFileError) {
-                    missingFileError = true;    // Set error flag the mail system does not get spammed
+                if(!missingFileError[sensorID]) {
+                    missingFileError[sensorID] = true;    // Set error flag the mail system does not get spammed
                     mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + "fs.stat: " + error.message, 2)
                 } 
                 else console.log(mutil.getTimeSensorHeader(sensorID) + "fs.stat: An email was already sent regarding this issue and remains unresolved.")
             } else {
                 // Reset error flag for email
-                if(missingFileError) {
-                    missingFileError = false;
+                if(missingFileError[sensorID]) {
+                    missingFileError[sensorID] = false;
                     mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + "fs.stat issue has been resolved", 1)
                     console.log(mutil.getTimeSensorHeader(sensorID) + "fs.stat issue has been resolved.")
                 }
@@ -168,13 +176,13 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
     fs.open(fileName, 'r', function(err, fd) {
         if(err) {
             console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open: " + err.message)
-            if(!fileOpenError) {
-                fileOpenError = true
+            if(!fileOpenError[sensor_id]) {
+                fileOpenError[sensor_id] = true
                 mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.open: " + err.message, 2)
             } else console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open: An email was already sent regarding this issue and remains unresolved.")
         } else {
-            if(fileOpenError) {
-                fileOpenError = false
+            if(fileOpenError[sensor_id]) {
+                fileOpenError[sensor_id] = false
                 mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.open issue has been resolved", 1)
                 console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open issue has been resolved.")
             }
@@ -192,13 +200,13 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
                 if(err) {
                     console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.read: " + err.message)
-                    if(!fileReadError) {
-                        fileReadError = true
+                    if(!fileReadError[sensor_id]) {
+                        fileReadError[sensor_id] = true
                         mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.read: " + err.message, 2)
                     } else console.log(mutil.getTimeSensorHeader(sensor_id) + + "fs.read: An email was already sent regarding this issue and remains unresolved.")
                 } else {
-                    if(fileReadError) {
-                        fileReadError = false
+                    if(fileReadError[sensor_id]) {
+                        fileReadError[sensor_id] = false
                         mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.read issue has been resolved", 1)
                         console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.read issue has been resolved.")
                     }

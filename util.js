@@ -69,9 +69,10 @@ const emailNotify = (message, priority) => {
         to: mcfg.EMAIL_NOTIFICATION_ADDRESS,
         subject: priorityHeader + "mints-backend-notification", 
         html: message 
+    }, function (err, info) {
+        if(err) console.log(getTimeHeader() + "Failed to send email notification. Error: " + err.message)
+        else console.log(getTimeHeader() + "An email has been sent regarding server status")
     });
-
-    console.log(getTimeHeader() + "An email has been sent regarding server status")
 }
 
 const emailNotifyForShutdown = (message, type) => {
