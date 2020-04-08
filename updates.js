@@ -39,6 +39,8 @@ const dataToUpdateCommonParams = [
 ///////////////////////////////////////////////////////////
 
 var missingFileError = false
+var fileOpenError = false
+var fileReadError = false
 
 /*
     Manually update sensor data on REST API call
@@ -105,17 +107,19 @@ function processSensors(sensors) {
         // Open file metadata (through stat) to get its file size
         fs.stat(fileName, function(error, stat) {
             if(error) {
-                console.log(mutil.getTimeSensorHeader(sensorID) + error.message)
+                console.log(mutil.getTimeSensorHeader(sensorID) + "fs.stat: " + error.message)
                 
                 if(!missingFileError) {
-                    mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + error.message, 2)
                     missingFileError = true;    // Set error flag the mail system does not get spammed
-                }
+                    mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + "fs.stat: " + error.message, 2)
+                } 
+                else console.log(mutil.getTimeSensorHeader(sensorID) + "fs.stat: An email was already sent regarding this issue and remains unresolved.")
             } else {
                 // Reset error flag for email
                 if(missingFileError) {
                     missingFileError = false;
-                    mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + "Missing file issue has been resolved", 1)
+                    mutil.emailNotify(mutil.getTimeSensorHeader(sensorID) + "fs.stat issue has been resolved", 1)
+                    console.log(mutil.getTimeSensorHeader(sensorID) + "fs.stat issue has been resolved.")
                 }
 
                 const fileSize = stat.size
@@ -163,9 +167,18 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
     // Open file in read-only
     fs.open(fileName, 'r', function(err, fd) {
         if(err) {
-            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+            console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open: " + err.message)
+            if(!fileOpenError) {
+                fileOpenError = true
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.open: " + err.message, 2)
+            } else console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open: An email was already sent regarding this issue and remains unresolved.")
         } else {
+            if(fileOpenError) {
+                fileOpenError = false
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.open issue has been resolved", 1)
+                console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open issue has been resolved.")
+            }
+
             var readCalc = fileSize - prevFileSize          // Calculate the number of bytes to read
             if(readCalc < 0) {                              // Temporary measure to deal with a negative result
                 console.log(mutil.getTimeSensorHeader(sensor_id) + "WARNING: Read size calculations resulted in a negative read (" + fileSize + " - " + prevFileSize + " = " + readCalc + ").\n"
@@ -178,9 +191,17 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
             const fileBuffer = Buffer.alloc(readLen)        // Allocate buffer based on the number of bytes we'll read
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
                 if(err) {
-                    console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                    mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                    console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.read: " + err.message)
+                    if(!fileReadError) {
+                        fileReadError = true
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.read: " + err.message, 2)
+                    } else console.log(mutil.getTimeSensorHeader(sensor_id) + + "fs.read: An email was already sent regarding this issue and remains unresolved.")
                 } else {
+                    if(fileReadError) {
+                        fileReadError = false
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.read issue has been resolved", 1)
+                        console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.read issue has been resolved.")
+                    }
                     // Every single line in the file
                     const fileLines = buffer.toString().split('\n')                   
                     
