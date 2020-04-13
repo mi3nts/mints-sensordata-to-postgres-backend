@@ -17,22 +17,8 @@ const psql = new PSQL({
     connectionString: pgcon.PSQL_LOGIN
 })
 
-///////////////////////////////////////////////////////////
-// -- Begin modification area -- //////////////////////////
-
 // Add more data columns here
-const dataColumns = [
-    "PM1",
-    "PM2_5",
-    "PM10",
-    "Latitude",
-    "Longitude",
-    "Humidity",
-    "Temperature"
-]
-
-// -- End modification area -- ////////////////////////////
-///////////////////////////////////////////////////////////
+const dataColumns = mcfg.DATA_COLUMNS_ALL
 
 /*
     Opens the directory ../sensorData and inserts a row for each sensor ID folder if it 

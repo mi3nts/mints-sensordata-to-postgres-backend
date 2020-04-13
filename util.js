@@ -34,8 +34,13 @@ const getTimeHeader = () => {
     return "[" + (new Date()) + "]: " 
 }
 
+
+
 const emailNotify = (message, priority) => {
-    if(!mcfg.EMAIL_NOTIFICATION_ENABLE) return;
+    if(!mcfg.EMAIL_NOTIFICATION_ENABLE) {
+        console.log(getTimeHeader() + "Email notifications are disabled! No email was sent.")
+        return;
+    }
 
     var priorityHeader = ""
     switch (priority) {
@@ -52,7 +57,7 @@ const emailNotify = (message, priority) => {
             break;
     }
 
-    // create reusable transporter object using the default SMTP transport
+    // Create reusable transporter object using the default SMTP transport
     let transporter = mailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
@@ -63,7 +68,7 @@ const emailNotify = (message, priority) => {
         }
     });
 
-    // send mail with defined transport object
+    // Send mail with defined transport object
     let info = transporter.sendMail({
         from: mcfg.EMAIL_NOTIFICATION_ADDRESS, 
         to: mcfg.EMAIL_NOTIFICATION_ADDRESS,
@@ -76,7 +81,10 @@ const emailNotify = (message, priority) => {
 }
 
 const emailNotifyForShutdown = (message, type) => {
-    if(!mcfg.EMAIL_NOTIFICATION_ENABLE) return;
+    if(!mcfg.EMAIL_NOTIFICATION_ENABLE) {
+        console.log(getTimeHeader() + "Email notifications are disabled! No email was sent.")
+        process.exit(type)
+    }
 
     var typeHeader = "[Shutdown] "
     if(type == 99) {

@@ -39,3 +39,7 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
     col_offset_humidity INT,
     col_offset_temperature INT
 );
+
+CREATE UNIQUE INDEX index_data_pm1 ON data_pm1(timestamp, sensor_id);
+CREATE UNIQUE INDEX index_data_pm2_5 ON data_pm2_5(timestamp, sensor_id);
+CREATE UNIQUE INDEX index_data_pm10 ON data_pm10(timestamp, sensor_id);
