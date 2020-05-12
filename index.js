@@ -50,7 +50,7 @@ app.get('/update_meta', updm.updateSensorMetadata)
 */
 schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     // Get today's date (day of the week number)
-    var now = fireDate.getDay()
+    var now = fireDate.getUTCDate()
 
     // ----- IMPORTANT -----
     // If its a new day when this update routine is called then reset
@@ -74,7 +74,7 @@ app.listen(port, () => {
     mutil.emailNotify(mutil.getTimeHeader() + "Sensor processing server has started on port " + port + ".", 1)
     updm.resetLargestReadToday()
     
-    today = (new Date()).getDay()
+    today = (new Date()).getUTCDate()
     updm.updateSensorMetadata()
 })
 
