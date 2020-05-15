@@ -21,7 +21,7 @@ const schedule = require('node-schedule')
 const mutil = require('./util.js')
 var today
 
-// Important setup procedure (probably to allow JSON returns and thus REST functionality)
+// Important setup procedure (to allow JSON output and thus REST functionality)
 app.use(bodyParser.json())
 app.use(
     bodyParser.urlencoded({
@@ -55,15 +55,18 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     // ----- IMPORTANT -----
     // If its a new day when this update routine is called then reset
     //   the largest read for today's sensor data file
-    // If its a new day and this is not called, there may be serious inaccuracies in the database
+    // TEMPORARY: For now, new sensor data will not be fetched when the reset function is called due
+    //            to a race condition where the read is reset asynchronously as the rest of the script
+    //            tries to update the sensor data.
+    // If its a new day and this is not done, there will be missing data
     if(now != today) {
         console.log(mutil.getTimeSensorHeader() + "Preparing to reset largest file size read (today: " + today + ", now: " + now + ")")
         updm.resetLargestReadToday()
         today = now
+        mutil.updateDateToday()
     }
-    
-    // Check for new sensor data and update the database
-    upd.updateSensorData()
+    // Otherwise check for new sensor data and update the database
+    else upd.updateSensorData()
 });
 
 /*
