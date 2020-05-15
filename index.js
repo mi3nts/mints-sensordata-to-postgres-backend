@@ -63,7 +63,7 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
         console.log(mutil.getTimeSensorHeader() + "Preparing to reset largest file size read (today: " + today + ", now: " + now + ")")
         updm.resetLargestReadToday()
         today = now
-        mutil.updateDateToday()
+        // mutil.updateDateToday()
     }
     // Otherwise check for new sensor data and update the database
     else upd.updateSensorData()

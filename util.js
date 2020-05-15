@@ -9,6 +9,7 @@ const mailer = require('nodemailer')
 const mcfg = require('./mconfig.js')
 
 // Tracking today's date recognized by this script for functions
+/*
 var dateToday = new Date()
 
 const getDateToday = () => {
@@ -18,12 +19,13 @@ const getDateToday = () => {
 const updateDateToday = () => {
     dateToday = new Date()
 }
+*/
 /*
     Generates the filepath for today's sensor data
 */
 const getSensorDataToday = (sensor_id) => {
     // Get today's date object and break it up to form a date path
-    //var dateToday = new Date()
+    var dateToday = new Date()
 
     // Generate month number as 01 instead of 1
     let monthLead = (dateToday.getUTCMonth() + 1) < 10 ? '0' : ''
@@ -141,8 +143,8 @@ const emailNotifyForShutdown = (message, type) => {
 //   and called like an object method
 // Must remain on the bottom of script files
 module.exports = {
-    getDateToday,
-    updateDateToday,
+    //getDateToday,
+    //updateDateToday,
     getSensorDataToday,
     getTimeSensorHeader,
     getTimeHeader,
