@@ -43,7 +43,9 @@ app.get('/update', upd.updateSensorDataManual)
 // Call to update sensor metadata manually 
 // This needs to be done if a new sensor is added or if any of the column 
 //   headers in the .csv output changes position or name
-app.get('/update_meta', updm.updateSensorMetadata)      
+app.get('/update_meta', updm.updateSensorMetadata)     
+app.get('/reset_read_count', updm.resetLargestReadToday)
+app.get('/toggle_sensor/:sensor_id', updm.toggleSensorForPublic) 
 
 /*
     Routinely called "main" function for continuous operations

@@ -141,10 +141,67 @@ const resetLargestReadToday = function () {
     }
 }
 
+const toggleSensorForPublic = (request, response) => {
+    if(psql == null) {
+        console.log("The PSQL object is unavailable at this time.")
+        response.json({
+            status: 500,
+            message: "The PSQL object is unavailable at this time."
+        })
+    } else {
+        const getQuery = "SELECT allow_public FROM sensor_meta WHERE sensor_id = $1;"
+        const queryParams = [request.params.sensor_id];
+        psql.query(getQuery, queryParams,
+            (error, res) => {
+                if(error) {
+                    console.log("ERROR: Unable to get allow_public status of sensor id: " + request.params.sensor_id);
+                    response.json({
+                        status: 500,
+                        message: "ERROR: Unable to get allow_public status of sensor id: " + request.params.sensor_id
+                    })
+                } else if(res.rows[0].allow_public) {
+                    psql.query("UPDATE sensor_meta SET allow_public = false WHERE sensor_id = $1", queryParams,
+                    (error, res) => {
+                        if(error) {
+                            console.log("ERROR: Unable to change publicity to false of sensor id: " + request.params.sensor_id);
+                            response.json({
+                                status: 500,
+                                message: "ERROR: Unable to change publicity to false of sensor id: " + request.params.sensor_id
+                            })
+                        } else {
+                            response.json({
+                                status: 200,
+                                message: "Publicity of " + request.params.sensor_id + " set to false."
+                            })
+                        }
+                    })
+                } else {
+                    psql.query("UPDATE sensor_meta SET allow_public = true WHERE sensor_id = $1", queryParams,
+                    (error, res) => {
+                        if(error) {
+                            console.log("ERROR: Unable to change publicity to true of sensor id: " + request.params.sensor_id);
+                            response.json({
+                                status: 500,
+                                message: "ERROR: Unable to change publicity to true of sensor id: " + request.params.sensor_id
+                            })
+                        } else {
+                            response.json({
+                                status: 200,
+                                message: "Publicity of " + request.params.sensor_id + " set to true."
+                            })
+                        }
+                    })
+                }
+            }
+        )
+    }
+}
+
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files
 module.exports = {
     updateSensorMetadata,
-    resetLargestReadToday
+    resetLargestReadToday,
+    toggleSensorForPublic
 }

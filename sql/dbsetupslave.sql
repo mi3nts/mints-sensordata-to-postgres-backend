@@ -1,6 +1,5 @@
 /*
-    From now on, the master database should be the main source for table format. 
-    This file will eventually be deleted but remains in commits for a paper trail as there have been changes.
+    Setup main data tables
 */
 CREATE TABLE IF NOT EXISTS data_pm1 (
     timestamp TIMESTAMP,
@@ -31,7 +30,11 @@ CREATE TABLE IF NOT EXISTS data_pm10 (
     humidity double precision,
     temperature double precision
 );
-
+/*
+    Setup table used for gathering information about how to read the csv files.
+    On the slave database, it is useful in providing a list and indicating whether or not the sensor
+      is ready for the public.
+*/
 CREATE TABLE IF NOT EXISTS sensor_meta (
     sensor_id VARCHAR(20) UNIQUE,
     allow_public BOOLEAN,
@@ -47,10 +50,13 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
     col_offset_dew_point INT
 );
 
+/* Needed for replication */
 ALTER TABLE data_pm1 REPLICA IDENTITY FULL;
 ALTER TABLE data_pm2_5 REPLICA IDENTITY FULL;
 ALTER TABLE data_pm10 REPLICA IDENTITY FULL;
 
-CREATE UNIQUE INDEX index_data_pm1 ON data_pm1(timestamp, sensor_id);
-CREATE UNIQUE INDEX index_data_pm2_5 ON data_pm2_5(timestamp, sensor_id);
-CREATE UNIQUE INDEX index_data_pm10 ON data_pm10(timestamp, sensor_id);
+/*
+    Needed to connect to the master database to replicate data
+*/
+CREATE SUBSCRIPTION mints_sync CONNECTION 'host=<master_ip> port=5432 password=teamlary user=replicator dbname=mints' PUBLICATION mints_public;
+CREATE SUBSCRIPTION mints_sync_meta CONNECTION 'host=<master_ip> port=5432 password=teamlary user=replicator dbname=mints' PUBLICATION mints_public_meta;
