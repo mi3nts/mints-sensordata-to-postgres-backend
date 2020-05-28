@@ -1,7 +1,5 @@
-sql/dbdelete.sql
-sql/dbresetData.sql
+sql-tools/*
 node_modules/*
+sensorData/*
 mconfig.js
 postgrescon.js
-sensorData/*
-
