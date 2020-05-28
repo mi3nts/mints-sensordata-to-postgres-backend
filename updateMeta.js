@@ -159,7 +159,7 @@ const toggleSensorForPublic = (request, response) => {
                         status: 500,
                         message: "ERROR: Unable to get allow_public status of sensor id: " + request.params.sensor_id
                     })
-                } else if(res.rows[0].allow_public) {
+                } else if(res.rows[0] != null && res.rows[0].allow_public) {
                     psql.query("UPDATE sensor_meta SET allow_public = false WHERE sensor_id = $1", queryParams,
                     (error, res) => {
                         if(error) {
@@ -175,7 +175,7 @@ const toggleSensorForPublic = (request, response) => {
                             })
                         }
                     })
-                } else {
+                } else if(res.rows[0] != null) {
                     psql.query("UPDATE sensor_meta SET allow_public = true WHERE sensor_id = $1", queryParams,
                     (error, res) => {
                         if(error) {
@@ -190,6 +190,11 @@ const toggleSensorForPublic = (request, response) => {
                                 message: "Publicity of " + request.params.sensor_id + " set to true."
                             })
                         }
+                    })
+                } else {
+                    response.json({
+                        status: 500,
+                        message: request.params.sensor_id + " does not exist."
                     })
                 }
             }
