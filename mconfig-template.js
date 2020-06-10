@@ -9,6 +9,9 @@
     Then rename the file to remove '-template'.
 */
 
+// Main MQTT broker address
+const MQTT_BROKER_ADDRESS = 'mqtt://<MQTT Server Address (IP or Domain Name)>'
+
 // Main sensor directory path
 const SENSOR_DIRECTORY = '<path to where the sensor data folders are>'
 
@@ -50,6 +53,7 @@ const DATA_COLUMNS_COMMON_UPDATE = [
 ]
 
 module.exports = {
+    MQTT_BROKER_ADDRESS,
     SENSOR_DIRECTORY,
     EMAIL_NOTIFICATION_ENABLE,
     EMAIL_NOTIFICATION_ADDRESS,

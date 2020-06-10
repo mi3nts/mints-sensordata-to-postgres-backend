@@ -8,6 +8,7 @@
     Main script file to be called from terminal.
     Where it all comes together
 */
+const mqtt = require('mqtt')
 const process = require('process')
 const express = require('express')
 const bodyParser = require('body-parser')
@@ -19,6 +20,9 @@ const updm = require('./updateMeta.js')
 const schedule = require('node-schedule')
 
 const mutil = require('./util.js')
+const mcfg = require('./mconfig.js')
+const client  = mqtt.connect(mcfg.MQTT_BROKER_ADDRESS)
+
 var today
 
 // Important setup procedure (to allow JSON output and thus REST functionality)
@@ -82,6 +86,28 @@ app.listen(port, () => {
     today = (new Date()).getUTCDate()
     updm.updateSensorMetadata()
 })
+
+// MQTT Operations currently disabled (not ready)
+/*
+    Subscribe to MQTT topic(s) upon connection established to broker
+*/
+/*
+client.on('connect', function () {
+    client.subscribe('sensordata', function (err) {
+        console.log(mutil.getTimeHeader() + 'MQTT subscription established')
+    })
+})
+*/
+/*
+    Manage data received from MQTT respectively
+*/
+/*
+client.on('message', function (topic, message) {
+    if(topic.toString() == 'sensordata') {
+        upd.updateSensorDataFromMQTT(message.toString())
+    }
+})
+*/
 
 /*
     Notify for "normal" exit even though none exists right now and exit
