@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS data_pm1 (
     longitude double precision,
     latitude double precision,
     humidity double precision,
-    temperature double precision
+    temperature double precision,
+    pressure double precision,
+    dewpoint double precision
 );
 
 CREATE TABLE IF NOT EXISTS data_pm2_5 (
@@ -18,7 +20,9 @@ CREATE TABLE IF NOT EXISTS data_pm2_5 (
     longitude double precision,
     latitude double precision,
     humidity double precision,
-    temperature double precision
+    temperature double precision,
+    pressure double precision,
+    dewpoint double precision
 );
 
 CREATE TABLE IF NOT EXISTS data_pm10 (
@@ -28,7 +32,9 @@ CREATE TABLE IF NOT EXISTS data_pm10 (
     longitude double precision,
     latitude double precision,
     humidity double precision,
-    temperature double precision
+    temperature double precision,
+    pressure double precision,
+    dewpoint double precision
 );
 /*
     Setup table used for gathering information about how to read the csv files.
@@ -37,6 +43,7 @@ CREATE TABLE IF NOT EXISTS data_pm10 (
 */
 CREATE TABLE IF NOT EXISTS sensor_meta (
     sensor_id VARCHAR(20) UNIQUE,
+    sensor_name VARCHAR(120) UNIQUE,
     allow_public BOOLEAN,
     largest_read INT,
     col_offset_longitude INT,
@@ -47,7 +54,7 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
     col_offset_pressure INT,
     col_offset_temperature INT,
     col_offset_humidity INT,
-    col_offset_dew_point INT
+    col_offset_dewpoint INT
 );
 
 /* Needed for replication */

@@ -32,7 +32,9 @@ const DATA_COLUMNS_ALL = [
     "Latitude",
     "Longitude",
     "Humidity",
-    "Temperature"
+    "Temperature",
+    "Pressure",
+    "DewPoint"
 ]
 
 // All the data columns that have their dedicated table, usually denoted by
@@ -49,7 +51,9 @@ const DATA_COLUMNS_COMMON_UPDATE = [
 	"latitude",
     "longitude",
     "humidity",
-    "temperature"
+    "temperature",
+    "pressure",
+    "dewpoint"
 ]
 
 module.exports = {
