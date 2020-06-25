@@ -67,6 +67,7 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     // If its a new day and this is not done, there will be missing data
     if(now != today) {
         console.log(mutil.getTimeSensorHeader() + "Preparing to reset largest file size read (today: " + today + ", now: " + now + ")")
+        mutil.emailNotify(mutil.getTimeHeader() + "It is now a new day in UTC time.", 1)
         updm.resetLargestReadToday()
         today = now
         // mutil.updateDateToday()
@@ -80,7 +81,7 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
 */
 app.listen(port, () => {
     console.log(mutil.getTimeHeader() + 'Server running on port ' + port + '.')
-    mutil.emailNotify(mutil.getTimeHeader() + "Sensor processing server has started on port " + port + ".", 1)
+    mutil.emailNotify(mutil.getTimeHeader() + "Sensor data ingestion script has started on port " + port + ".", 1)
     updm.resetLargestReadToday()
     
     today = (new Date()).getUTCDate()

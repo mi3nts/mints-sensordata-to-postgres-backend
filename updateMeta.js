@@ -30,8 +30,8 @@ const updateSensorMetadata = () => {
     else {
         fs.readdir(mcfg.SENSOR_DIRECTORY, function(err, files) {
             if(err) {
-                console.log(mutil.getTimeHeader() + err.message)
-                mutil.emailNotify(mutil.getTimeHeader() + err.message, 2)
+                console.log(mutil.getTimeHeader() + "While getting the list of sensors, the following error occured: " + err.message)
+                mutil.emailNotify(mutil.getTimeHeader() + "While getting the list of sensors, the following error occured: " + err.message, 2)
             } else {
                 for(var i = 0; i < files.length; i++) {
                     const sensor_id = files[i]
@@ -59,8 +59,8 @@ function updateColOffsets(sensor_id) {
 
     fs.stat(fileName, function (err, stat) {
         if(err) {
-            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+            console.log(mutil.getTimeSensorHeader(sensor_id) + "While updating column offsets, the following error occured: " + err.message)
+            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "While updating column offsets, the following error occured: " + err.message, 2)
         } else {
             const fileSize = stat.size
             fs.open(fileName, 'r', function (err, fd) {

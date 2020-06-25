@@ -28,6 +28,7 @@ const dataToUpdateCommonParams = mcfg.DATA_COLUMNS_COMMON_UPDATE
 var missingFileError = new Object
 var fileOpenError = new Object
 var fileReadError = new Object
+var outdatedSensor = new Object
 
 /*
     Manually update sensor data on REST API call
@@ -85,6 +86,17 @@ const updateSensorDataFromMQTT = function (message) {
     })
 }
 
+const updateSensorDataHistorical = function () {
+    // Get sensors ids in directory
+    fs.readdir(mcfg.SENSOR_DIRECTORY, function (err, files) {
+        if(err) {
+            console.log(mutil.getTimeHeader() + err.message)
+            mutil.emailNotify(mutil.getTimeHeader() + err.message, 2)
+        } else {
+            
+        }
+    })
+}
 /*
     Retrieves the list of sensor_ids and prepares to send it to 
       processSensors() 
@@ -110,6 +122,8 @@ function querySensorList() {
                     fileOpenError[results.rows[i].sensor_id.trim()] = false
                 if(fileReadError[results.rows[i].sensor_id.trim()] == null)
                     fileReadError[results.rows[i].sensor_id.trim()] = false
+                if(outdatedSensor[results.rows[i].sensor_id.trim()] == null)
+                    outdatedSensor[results.rows[i].sensor_id.trim()] = false
             }
             processSensorDataForToday(sensorBuffer)
         }
@@ -257,8 +271,12 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
         + " WHERE sensor_meta.sensor_id = $1;"
     psql.query(metaUpdateQuery, [sensor_id, (prevFileSize + readLen)], (err, res) => {
         if(err) {
-            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+            console.log(mutil.getTimeSensorHeader(sensor_id) 
+                + "An error occured while updating the largest amount of bytes read for today's sensor data file: " 
+                + err.message)
+            // mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+            //     + "An error occured while updating the largest amount of bytes read for today's sensor data file: " 
+            //     + err.message, 2)
         } else {
             // If no new data was read
             if(bytesRead == 0)
@@ -319,11 +337,11 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset, isFromMQTT) {
             psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
                 if(err) {
                     console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                    //mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
                 } else if(isFromMQTT) {
                     // Note, this message may print three times because it is currently inserted into three different tables
                     console.log(mutil.getTimeSensorHeader(sensor_id) + "Successfully inserted from MQTT into the database")
                 }
+                checkSensorDataLastUpdated(sensor_id)
             })
         }
 
@@ -339,6 +357,7 @@ function updateSensorLocation(sensor_id, longitude, latitude) {
         console.error(mutil.getTimeSensorHeader(sensor_id) 
             + "Could not update location due to longitude: " + longitude + ", latitude: " + latitude
             + " being possibily null or NaN")
+        
         return
     }
     const query = "UPDATE sensor_meta SET longitude = $2, latitude = $3, last_updated = $4 WHERE sensor_id = $1"
@@ -350,6 +369,33 @@ function updateSensorLocation(sensor_id, longitude, latitude) {
     })
 }
 
+function checkSensorDataLastUpdated(sensor_id) {
+    const query = "SELECT MAX(timestamp) FROM data_pm2_5 WHERE sensor_id = $1"
+    const queryParams = [sensor_id]
+    psql.query(query, queryParams, (error, res) => {
+        if(error) {
+            console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
+        } else {
+            if(res != null && res.rows[0] != null && res.rows[0].max != null) {
+                var retreivedTimestamp = Date.parse(res.rows[0].max)
+                //console.log(retreivedTimestamp + " vs. " + (new Date().getTime() - 360000))
+                if(retreivedTimestamp < (new Date()).getTime() - 3600000) {
+                    if(!outdatedSensor[sensor_id]) {
+                        console.log(mutil.getTimeSensorHeader(sensor_id) + "The sensor has not sent any data in over an hour.")
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "The sensor has not sent any data in over an hour.", 2)
+                        outdatedSensor[sensor_id] = true
+                    }
+                } else {
+                    if(outdatedSensor[sensor_id]) {
+                        console.log(mutil.getTimeSensorHeader(sensor_id) + "The sensor is now sending data.")
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "The sensor is now sending data.", 1)
+                        outdatedSensor[sensor_id] = false
+                    }
+                }
+            }
+        }
+    })
+}
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files
