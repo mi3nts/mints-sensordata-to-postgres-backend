@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS data_pm10 (
 */
 CREATE TABLE IF NOT EXISTS sensor_meta (
     sensor_id VARCHAR(20) UNIQUE,
-    sensor_name VARCHAR(120) UNIQUE,
+    sensor_name VARCHAR(120),
     allow_public BOOLEAN,
     largest_read INT,
     col_offset_longitude INT,
