@@ -121,10 +121,17 @@ process.on('exit', function () {
     Notify for manual shutdown and exit
 */
 process.on('SIGINT', function () {
-    console.log(mutil.getTimeHeader() + 'Manual shutdown was performed.')
-    mutil.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor processing server has been manually stopped.", 2)
+    console.log(mutil.getTimeHeader() 
+        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.')
+    mutil.emailNotifyForShutdown(mutil.getTimeHeader() 
+        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.', 2)
 });
-
+process.on('SIGTERM', function () {
+    console.log(mutil.getTimeHeader() 
+        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.')
+    mutil.emailNotifyForShutdown(mutil.getTimeHeader() 
+        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.', 2)
+});
 /*
     Notify for uncaught exception and exit
 */

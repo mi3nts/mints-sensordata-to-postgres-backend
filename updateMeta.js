@@ -30,8 +30,12 @@ const updateSensorMetadata = () => {
     else {
         fs.readdir(mcfg.SENSOR_DIRECTORY, function(err, files) {
             if(err) {
-                console.log(mutil.getTimeHeader() + "While getting the list of sensors, the following error occured: " + err.message)
-                mutil.emailNotify(mutil.getTimeHeader() + "While getting the list of sensors, the following error occured: " + err.message, 2)
+                console.log(mutil.getTimeHeader() 
+                    + "Directory read error - While getting the list of sensors, the following error occured"
+                    + "(Make sure you configured the sensor directory correctly in mconfig.js where SENSOR_DIRECTORY is):\n" + err.message)
+                mutil.emailNotify(mutil.getTimeHeader() 
+                    + "Directory read error - While getting the list of sensors, the following error occured"
+                    + "(Make sure you configured the sensor directory correctly in mconfig.js where SENSOR_DIRECTORY is):\n" + err.message, 2)
             } else {
                 for(var i = 0; i < files.length; i++) {
                     const sensor_id = files[i]
@@ -59,8 +63,10 @@ function updateColOffsets(sensor_id) {
 
     fs.stat(fileName, function (err, stat) {
         if(err) {
-            console.log(mutil.getTimeSensorHeader(sensor_id) + "While updating column offsets, the following error occured: " + err.message)
-            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "While updating column offsets, the following error occured: " + err.message, 2)
+            console.log(mutil.getTimeSensorHeader(sensor_id) 
+                + "File metadata read error - While updating column offsets, the following error occured:\n" + err.message)
+            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                + "File metadata read error - While updating column offsets, the following error occured:\n" + err.message, 2)
         } else {
             const fileSize = stat.size
             fs.open(fileName, 'r', function (err, fd) {
@@ -73,8 +79,10 @@ function updateColOffsets(sensor_id) {
 
                     fs.read(fd, fileBuffer, 0, fileSize, 0, function(err, bytesRead, buffer) {
                         if(err) {
-                            console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                            console.log(mutil.getTimeSensorHeader(sensor_id) 
+                                + "File read error - While updating column offsets, the following read error occured:\n" + err.message)
+                            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                                + "File read error - While updating column offsets, the following read error occured:\n" + err.message, 2)
                         } 
                         // Every single line in the file, although we are only focusing on one line only
                         var fileLines = fileBuffer.toString().split('\n')                   
@@ -110,8 +118,10 @@ function updateColOffsets(sensor_id) {
                         // Update the sensor metadata
                         psql.query(updateMetaQuery, updateMetaQueryParams, (err, res) => {
                             if(err) { 
-                                console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                                console.log(mutil.getTimeSensorHeader(sensor_id) 
+                                    + "Database error - An error occured while updating sensor metadata on the database:\n" + err.message)
+                                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                                    + "Database error - An error occured while updating sensor metadata on the database:\n" + err.message, 2)
                             }
                             console.log(mutil.getTimeSensorHeader(sensor_id) + "Finished updating sensor metadata")
                         })

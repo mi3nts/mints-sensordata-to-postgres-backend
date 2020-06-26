@@ -151,19 +151,25 @@ function getFileMetadata(fileName, sensor_id) {
     // Open file metadata (through stat) to get its file size
     fs.stat(fileName, function(error, stat) {
         if(error) {
-            console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.stat: " + error.message)
-            
+            console.log(mutil.getTimeSensorHeader(sensor_id) 
+                + "Metadata read error - An error occured while trying to read the file metadata "
+                + "(This is likely due to no calibrated file output):\n" + error.message)
+            checkSensorDataLastUpdated(sensor_id)
+
             if(!missingFileError[sensor_id]) {
                 missingFileError[sensor_id] = true;    // Set error flag the mail system does not get spammed
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.stat: " + error.message, 2)
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                    + "Metadata read error - An error occured while trying to read the file metadata "
+                    + "(This is likely due to no calibrated file output):\n" + error.message, 2)
             } 
-            else console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.stat: An email was already sent regarding this issue and remains unresolved.")
+            else console.log(mutil.getTimeSensorHeader(sensor_id) 
+                + "Metadata read error - An email was already sent regarding this issue and remains unresolved.")
         } else {
             // Reset error flag for email
             if(missingFileError[sensor_id]) {
                 missingFileError[sensor_id] = false;
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.stat issue has been resolved", 1)
-                console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.stat issue has been resolved.")
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "Metadata read error issue has been resolved", 1)
+                console.log(mutil.getTimeSensorHeader(sensor_id) + "Metadata read error issue has been resolved.")
             }
             const fileSize = stat.size
             // Query table for the last largest number of bytes read 
@@ -209,16 +215,16 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
     // Open file in read-only
     fs.open(fileName, 'r', function(err, fd) {
         if(err) {
-            console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open: " + err.message)
+            console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error - File failed to open:\n" + err.message)
             if(!fileOpenError[sensor_id]) {
                 fileOpenError[sensor_id] = true
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.open: " + err.message, 2)
-            } else console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open: An email was already sent regarding this issue and remains unresolved.")
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error - File failed to open:\n" + err.message, 2)
+            } else console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error - An email was already sent regarding this issue and remains unresolved.")
         } else {
             if(fileOpenError[sensor_id]) {
                 fileOpenError[sensor_id] = false
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.open issue has been resolved", 1)
-                console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.open issue has been resolved.")
+                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error issue has been resolved", 1)
+                console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error issue has been resolved.")
             }
 
             var readCalc = fileSize - prevFileSize          // Calculate the number of bytes to read
@@ -234,16 +240,16 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
 
             fs.read(fd, fileBuffer, 0, readLen, curFileOffset, function(err, bytesRead, buffer) {
                 if(err) {
-                    console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.read: " + err.message)
+                    console.log(mutil.getTimeSensorHeader(sensor_id) + "File read error - Unable to read file:\n" + err.message)
                     if(!fileReadError[sensor_id]) {
                         fileReadError[sensor_id] = true
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.read: " + err.message, 2)
-                    } else console.log(mutil.getTimeSensorHeader(sensor_id) + + "fs.read: An email was already sent regarding this issue and remains unresolved.")
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error - Unable to read file:\n" + err.message, 2)
+                    } else console.log(mutil.getTimeSensorHeader(sensor_id) + + "File read error - An email was already sent regarding this issue and remains unresolved.")
                 } else {
                     if(fileReadError[sensor_id]) {
                         fileReadError[sensor_id] = false
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "fs.read issue has been resolved", 1)
-                        console.log(mutil.getTimeSensorHeader(sensor_id) + "fs.read issue has been resolved.")
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error issue has been resolved", 1)
+                        console.log(mutil.getTimeSensorHeader(sensor_id) + "File read error issue has been resolved.")
                     }
 
                     // Start parsing data from the CSV file
@@ -272,7 +278,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     psql.query(metaUpdateQuery, [sensor_id, (prevFileSize + readLen)], (err, res) => {
         if(err) {
             console.log(mutil.getTimeSensorHeader(sensor_id) 
-                + "An error occured while updating the largest amount of bytes read for today's sensor data file: " 
+                + "Database error - An error occured while updating the largest amount of bytes read for today's sensor data file:\n" 
                 + err.message)
             // mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
             //     + "An error occured while updating the largest amount of bytes read for today's sensor data file: " 
@@ -378,17 +384,16 @@ function checkSensorDataLastUpdated(sensor_id) {
         } else {
             if(res != null && res.rows[0] != null && res.rows[0].max != null) {
                 var retreivedTimestamp = Date.parse(res.rows[0].max)
-                //console.log(retreivedTimestamp + " vs. " + (new Date().getTime() - 360000))
-                if(retreivedTimestamp < (new Date()).getTime() - 3600000) {
+                if(retreivedTimestamp < (new Date()).getTime() - mcfg.EMAIL_NOTIFY_INACTIVE_THRESHOLD) {
                     if(!outdatedSensor[sensor_id]) {
-                        console.log(mutil.getTimeSensorHeader(sensor_id) + "The sensor has not sent any data in over an hour.")
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "The sensor has not sent any data in over an hour.", 2)
+                        console.log(mutil.getTimeSensorHeader(sensor_id) + "No calibrated data from this sensor has been received in over an hour.")
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "No calibrated data from this sensor has been received in over an hour.", 2)
                         outdatedSensor[sensor_id] = true
                     }
                 } else {
                     if(outdatedSensor[sensor_id]) {
-                        console.log(mutil.getTimeSensorHeader(sensor_id) + "The sensor is now sending data.")
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "The sensor is now sending data.", 1)
+                        console.log(mutil.getTimeSensorHeader(sensor_id) + "Calibrated data is now being received from this sensor.")
+                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "Calibrated data is now being received from this sensor.", 1)
                         outdatedSensor[sensor_id] = false
                     }
                 }

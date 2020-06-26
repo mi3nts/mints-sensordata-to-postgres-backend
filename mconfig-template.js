@@ -15,11 +15,14 @@ const MQTT_BROKER_ADDRESS = 'mqtt://<MQTT Server Address (IP or Domain Name)>'
 // Main sensor directory path
 const SENSOR_DIRECTORY = '<path to where the sensor data folders are>'
 
-// Allows email notification of 
+// Allows email notification
 const EMAIL_NOTIFICATION_ENABLE = false
 
 const EMAIL_NOTIFICATION_ADDRESS = "<email to send notifications to, must enable smtp access>"
 const EMAIL_NOTIFICATION_PASS = "<password to email, probably will not work with 2FA>"
+
+// Amount of time since a sensor last updated its calibrated data
+const EMAIL_NOTIFY_INACTIVE_THRESHOLD = 3600000
 
 // DO NOT EDIT THE FOLLOW BELOW THIS LINE FOR NOW /////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,6 +65,7 @@ module.exports = {
     EMAIL_NOTIFICATION_ENABLE,
     EMAIL_NOTIFICATION_ADDRESS,
     EMAIL_NOTIFICATION_PASS,
+    EMAIL_NOTIFY_INACTIVE_THRESHOLD,
     DATA_COLUMNS_ALL,
     DATA_COLUMNS_TABLE_UPDATE,
     DATA_COLUMNS_COMMON_UPDATE
