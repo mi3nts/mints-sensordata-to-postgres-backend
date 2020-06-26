@@ -50,7 +50,7 @@ app.get('/update', upd.updateSensorDataManual)
 app.get('/update_meta', updm.updateSensorMetadata)     
 app.get('/reset_read_count', updm.resetLargestReadToday)
 app.get('/toggle_sensor/:sensor_id', updm.toggleSensorForPublic) 
-
+app.get('/rename_sensor/:sensor_id/:sensor_name', updm.updateSensorName)
 /*
     Routinely called "main" function for continuous operations
 */

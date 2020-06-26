@@ -212,11 +212,34 @@ const toggleSensorForPublic = (request, response) => {
     }
 }
 
+const updateSensorName = (request, response) => {
+    const sensor_id = request.params.sensor_id
+    const sensor_name = request.params.sensor_name
+    const query = "UPDATE sensor_meta SET sensor_name = $2 WHERE sensor_id = $1"
+    const queryParams = [sensor_id, sensor_name]
+    psql.query(query, queryParams, (err, res) => {
+        if(err) {
+            console.log(mutil.getTimeSensorHeader(sensor_id) + "ERROR: Unable to change sensor name to " + sensor_name)
+            response.json({
+                status: 500,
+                message: mutil.getTimeSensorHeader(sensor_id) + "ERROR: Unable to change sensor name to " + sensor_name
+            })
+        } else {
+            console.log(mutil.getTimeSensorHeader(sensor_id) + "Succesfully changed sensor name to " + sensor_name)
+            response.json({
+                status: 200,
+                message: mutil.getTimeSensorHeader(sensor_id) + "Succesfully changed sensor name to " + sensor_name
+            })
+        }
+    })
+}
+
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files
 module.exports = {
     updateSensorMetadata,
     resetLargestReadToday,
-    toggleSensorForPublic
+    toggleSensorForPublic,
+    updateSensorName
 }
