@@ -13,7 +13,7 @@ const process = require('process')
 const express = require('express')
 const bodyParser = require('body-parser')
 const app = express()
-const port = 3000
+const port = 3200
 
 const upd = require('./updates.js')
 const updm = require('./updateMeta.js')
@@ -24,6 +24,7 @@ const mcfg = require('./mconfig.js')
 const client  = mqtt.connect(mcfg.MQTT_BROKER_ADDRESS)
 
 var today
+var terminatedAdminCommandError = false
 
 // Important setup procedure (to allow JSON output and thus REST functionality)
 app.use(bodyParser.json())
@@ -81,7 +82,10 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
 */
 app.listen(port, () => {
     console.log(mutil.getTimeHeader() + 'Server running on port ' + port + '.')
-    mutil.emailNotify(mutil.getTimeHeader() + "Sensor data ingestion script has started on port " + port + ".", 1)
+    mutil.emailNotify(mutil.getTimeHeader() + "Sensor data ingestion script has started on port " + port + "." +
+        "Please note that any issues raised in the past before this message are <b>not</b> remembered." + 
+        "You may recieve notifications if previous issues are still not resolved." +
+        "You will not recieve notifications for resolved issues.", 1)
     updm.resetLargestReadToday()
     
     today = (new Date()).getUTCDate()
@@ -114,7 +118,7 @@ client.on('message', function (topic, message) {
     Notify for "normal" exit even though none exists right now and exit
 */
 process.on('exit', function () {
-    mutil.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor processing server has stopped.", 0)
+    mutil.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor data processing server has stopped.", 0)
 })
 
 /*
@@ -122,20 +126,30 @@ process.on('exit', function () {
 */
 process.on('SIGINT', function () {
     console.log(mutil.getTimeHeader() 
-        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.')
+        + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.')
     mutil.emailNotifyForShutdown(mutil.getTimeHeader() 
-        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.', 2)
+        + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.', 2)
 });
 process.on('SIGTERM', function () {
     console.log(mutil.getTimeHeader() 
-        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.')
+        + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.')
     mutil.emailNotifyForShutdown(mutil.getTimeHeader() 
-        + 'Manual script shutdown was performed. This is usually done to perform an update to the script or to perform an observation of a potential issue.', 2)
+        + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.', 2)
 });
 /*
     Notify for uncaught exception and exit
 */
 process.on('uncaughtException', function(err) {
+    let message = ""
+    if(!terminatedAdminCommandError && err.message == "terminating connection due to administrator command") {
+        message = "Processing task was interrupted, likely due to system restart."
+        mutil.emailNotify(mutil.getTimeHeader() + message, 99)
+        terminatedAdminCommandError = true
+    } else if(terminatedAdminCommandError && err.message == "terminating connection due to administrator command") {
+        console.log("An email was already sent about a terminated connection.")
+    } else {
+        message = "UNCAUGHT EXCEPTION: " + err.message
+        mutil.emailNotify(mutil.getTimeHeader() + message, 99)
+    }
     console.log(mutil.getTimeHeader() + "UNCAUGHT EXCEPTION: " + err.stack)
-    mutil.emailNotify(mutil.getTimeHeader() + "UNCAUGHT EXCEPTION: " + err.message, 99)
 });

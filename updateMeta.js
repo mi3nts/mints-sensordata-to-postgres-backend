@@ -55,10 +55,6 @@ const updateSensorMetadata = () => {
 */
 function updateColOffsets(sensor_id) {
     // Setting the filename to open
-    // For testing only - Comment out when used in production
-    //const fileName = 'sensorData/' + sensor_id + '/2020/01/31/MINTS_' + sensor_id + '_calibrated_UTC_2020_01_31.csv'
-
-    // Uncomment when ready
     const fileName = mutil.getSensorDataToday(sensor_id)
 
     fs.stat(fileName, function (err, stat) {

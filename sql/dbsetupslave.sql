@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
     sensor_id VARCHAR(20) UNIQUE,
     sensor_name VARCHAR(120),
     allow_public BOOLEAN,
+    longitude double precision,
+    latitude double precision,
     largest_read INT,
     col_offset_longitude INT,
     col_offset_latitude INT,
@@ -54,7 +56,8 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
     col_offset_pressure INT,
     col_offset_temperature INT,
     col_offset_humidity INT,
-    col_offset_dewpoint INT
+    col_offset_dewpoint INT,
+    last_updated TIMESTAMP
 );
 
 /* Needed for replication */

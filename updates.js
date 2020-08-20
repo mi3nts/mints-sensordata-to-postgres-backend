@@ -25,10 +25,19 @@ const dataToUpdateCommonParams = mcfg.DATA_COLUMNS_COMMON_UPDATE
 
 // Error flags, used as a key:value array for each sensor
 // TODO: Improve
+var databaseConnectionError = false
 var missingFileError = new Object
 var fileOpenError = new Object
 var fileReadError = new Object
 var outdatedSensor = new Object
+
+/*
+    Updates sensor data
+*/
+const updateSensorData = function () {
+    if(psql == null) console.log("The PSQL object is unavailable at this time")
+    else querySensorList()
+}
 
 /*
     Manually update sensor data on REST API call
@@ -41,14 +50,6 @@ const updateSensorDataManual = (request, response) => {
     response.json({
         message: "Results are processing asynchronously. Use /data to get sensor data in a .json format"
     })
-}
-
-/*
-    Updates sensor data
-*/
-const updateSensorData = function () {
-    if(psql == null) console.log("The PSQL object is unavailable at this time")
-    else querySensorList()
 }
 
 /*
@@ -107,23 +108,33 @@ function querySensorList() {
     // Queries sensor_meta for list of sensor_ids
     psql.query("SELECT sensor_id FROM sensor_meta", (error, results) => {
         if (error) {
-            console.log(mutil.getTimeHeader() + error)
-            mutil.emailNotify(mutil.getTimeHeader() + error.message, 2)
+            if(!databaseConnectionError) {
+                console.log(mutil.getTimeHeader() + "Database query error:" + error)
+                mutil.emailNotify(mutil.getTimeHeader() + "Database query error:" + error.message 
+                    + ". If you see \"connect ECONNREFUSED 127.0.0.1:5432\", this likely means the database on the calibration computer is down", 2)
+                databaseConnectionError = true
+            }
         } else {
+            if(databaseConnectionError) {
+                console.log(mutil.getTimeHeader() + "Database query error has been resolved")
+                mutil.emailNotify(mutil.getTimeHeader() + "Database query error has been resolved", 1)
+                databaseConnectionError = false
+            }
             // Push the list of sensors into the array to pass on to the next function
             var sensorBuffer = []
             for(var i = 0; i < results.rows.length; i++) {
-                sensorBuffer.push(results.rows[i].sensor_id.trim())
+                sensor_id = results.rows[i].sensor_id.trim()
+                sensorBuffer.push(sensor_id)
 
                 // Set error flag instances
-                if(missingFileError[results.rows[i].sensor_id.trim()] == null)
-                    missingFileError[results.rows[i].sensor_id.trim()] = false
-                if(fileOpenError[results.rows[i].sensor_id.trim()] == null)
-                    fileOpenError[results.rows[i].sensor_id.trim()] = false
-                if(fileReadError[results.rows[i].sensor_id.trim()] == null)
-                    fileReadError[results.rows[i].sensor_id.trim()] = false
-                if(outdatedSensor[results.rows[i].sensor_id.trim()] == null)
-                    outdatedSensor[results.rows[i].sensor_id.trim()] = false
+                if(missingFileError[sensor_id] == null)
+                    missingFileError[sensor_id] = false
+                if(fileOpenError[sensor_id] == null)
+                    fileOpenError[sensor_id] = false
+                if(fileReadError[sensor_id] == null)
+                    fileReadError[sensor_id] = false
+                if(outdatedSensor[sensor_id] == null)
+                    outdatedSensor[sensor_id] = false
             }
             processSensorDataForToday(sensorBuffer)
         }
