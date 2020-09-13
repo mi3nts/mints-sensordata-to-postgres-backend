@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
 ALTER TABLE data_pm1 REPLICA IDENTITY FULL;
 ALTER TABLE data_pm2_5 REPLICA IDENTITY FULL;
 ALTER TABLE data_pm10 REPLICA IDENTITY FULL;
+ALTER TABLE sensor_meta REPLICA IDENTITY FULL;
 
 /* 
     Only the master database needs these indices in order to prevent duplicate rows/data.
