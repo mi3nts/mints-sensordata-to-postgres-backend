@@ -299,7 +299,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     //   mqtt messaging
     // This also resolves an issue with a large burst of messages when the script starts up since it
     //   would be reading the whole .csv instead of just the newer parts of the .csv
-    publishDataMQTT(sensor_id, fileLines[fileLines.length-1], dataOffset)
+    publishDataMQTT(sensor_id, fileLines[fileLines.length-2], dataOffset)
 
     // Update table for the largest amount of bytes read for today's sensor data file
     const metaUpdateQuery = "INSERT INTO sensor_meta(sensor_id, largest_read) VALUES ($1, $2) ON CONFLICT (sensor_id) DO UPDATE SET largest_read = $2"
