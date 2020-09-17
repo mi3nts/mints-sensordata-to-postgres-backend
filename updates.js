@@ -292,8 +292,14 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     // Data insertion
     for(var i = 1; i < fileLines.length; i++) {
         insertIntoDBFromLine(sensor_id, fileLines[i], dataOffset)
-        publishDataMQTT(sensor_id, fileLines[i], dataOffset)
     }
+
+    // Publish the latest available data since the .csv calibration outputs
+    //   can take awhile and can encompass multiple timestamps at once, leading to bursts of data in 
+    //   mqtt messaging
+    // This also resolves an issue with a large burst of messages when the script starts up since it
+    //   would be reading the whole .csv instead of just the newer parts of the .csv
+    publishDataMQTT(sensor_id, fileLines[fileLines.length-1], dataOffset)
 
     // Update table for the largest amount of bytes read for today's sensor data file
     const metaUpdateQuery = "INSERT INTO sensor_meta(sensor_id, largest_read) VALUES ($1, $2) ON CONFLICT (sensor_id) DO UPDATE SET largest_read = $2"
