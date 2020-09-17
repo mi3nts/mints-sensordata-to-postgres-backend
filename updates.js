@@ -1,16 +1,24 @@
 /*
     updates.js
-    MINTS-BACKEND
+    MINTS-DATA-INGESTION-BACKEND
     
     Reads sensor data from .csv files and updates the PostgreSQL database with new data.
     Most operations performed here are asynchronous.
 */
+const mqtt = require('mqtt')
 const PSQL = require('pg').Pool
 const pgcon = require('./postgrescon.js')
 
 const fs = require('fs')
 const mutil = require('./util.js')
 const mcfg = require('./mconfig.js')
+const em = require('./emailNotify.js')
+
+const mqttClient = mqtt.connect(mcfg.MQTT_BROKER_ADDRESS, {
+    clientId: 'mqttjs_mints_data_ingestion',
+    username: mcfg.MQTT_USERNAME,
+    password: mcfg.MQTT_PASS
+})
 
 // Postgre connector object and connection information
 const psql = new PSQL({
@@ -24,8 +32,8 @@ const dataToUpdate = mcfg.DATA_COLUMNS_TABLE_UPDATE
 const dataToUpdateCommonParams = mcfg.DATA_COLUMNS_COMMON_UPDATE
 
 // Error flags, used as a key:value array for each sensor
-// TODO: Improve
 var databaseConnectionError = false
+var mqttPublishingError = new Object
 var missingFileError = new Object
 var fileOpenError = new Object
 var fileReadError = new Object
@@ -92,12 +100,13 @@ const updateSensorDataHistorical = function () {
     fs.readdir(mcfg.SENSOR_DIRECTORY, function (err, files) {
         if(err) {
             console.log(mutil.getTimeHeader() + err.message)
-            mutil.emailNotify(mutil.getTimeHeader() + err.message, 2)
+            em.emailNotify(mutil.getTimeHeader() + err.message, 2)
         } else {
             
         }
     })
 }
+
 /*
     Retrieves the list of sensor_ids and prepares to send it to 
       processSensors() 
@@ -110,14 +119,14 @@ function querySensorList() {
         if (error) {
             if(!databaseConnectionError) {
                 console.log(mutil.getTimeHeader() + "Database query error:" + error)
-                mutil.emailNotify(mutil.getTimeHeader() + "Database query error:" + error.message 
+                em.emailNotify(mutil.getTimeHeader() + "Database query error:" + error.message 
                     + ". If you see \"connect ECONNREFUSED 127.0.0.1:5432\", this likely means the database on the calibration computer is down", 2)
                 databaseConnectionError = true
             }
         } else {
             if(databaseConnectionError) {
                 console.log(mutil.getTimeHeader() + "Database query error has been resolved")
-                mutil.emailNotify(mutil.getTimeHeader() + "Database query error has been resolved", 1)
+                em.emailNotify(mutil.getTimeHeader() + "Database query error has been resolved", 0)
                 databaseConnectionError = false
             }
             // Push the list of sensors into the array to pass on to the next function
@@ -127,6 +136,8 @@ function querySensorList() {
                 sensorBuffer.push(sensor_id)
 
                 // Set error flag instances
+                if(mqttPublishingError[sensor_id] == null)
+                    mqttPublishingError[sensor_id] = false
                 if(missingFileError[sensor_id] == null)
                     missingFileError[sensor_id] = false
                 if(fileOpenError[sensor_id] == null)
@@ -169,7 +180,7 @@ function getFileMetadata(fileName, sensor_id) {
 
             if(!missingFileError[sensor_id]) {
                 missingFileError[sensor_id] = true;    // Set error flag the mail system does not get spammed
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
                     + "Metadata read error - An error occured while trying to read the file metadata "
                     + "(This is likely due to no calibrated file output):\n" + error.message, 2)
             } 
@@ -179,7 +190,7 @@ function getFileMetadata(fileName, sensor_id) {
             // Reset error flag for email
             if(missingFileError[sensor_id]) {
                 missingFileError[sensor_id] = false;
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "Metadata read error issue has been resolved", 1)
+                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "Metadata read error issue has been resolved", 0)
                 console.log(mutil.getTimeSensorHeader(sensor_id) + "Metadata read error issue has been resolved.")
             }
             const fileSize = stat.size
@@ -229,12 +240,12 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
             console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error - File failed to open:\n" + err.message)
             if(!fileOpenError[sensor_id]) {
                 fileOpenError[sensor_id] = true
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error - File failed to open:\n" + err.message, 2)
+                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error - File failed to open:\n" + err.message, 2)
             } else console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error - An email was already sent regarding this issue and remains unresolved.")
         } else {
             if(fileOpenError[sensor_id]) {
                 fileOpenError[sensor_id] = false
-                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error issue has been resolved", 1)
+                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error issue has been resolved", 0)
                 console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error issue has been resolved.")
             }
 
@@ -254,12 +265,12 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
                     console.log(mutil.getTimeSensorHeader(sensor_id) + "File read error - Unable to read file:\n" + err.message)
                     if(!fileReadError[sensor_id]) {
                         fileReadError[sensor_id] = true
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error - Unable to read file:\n" + err.message, 2)
+                        em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error - Unable to read file:\n" + err.message, 2)
                     } else console.log(mutil.getTimeSensorHeader(sensor_id) + + "File read error - An email was already sent regarding this issue and remains unresolved.")
                 } else {
                     if(fileReadError[sensor_id]) {
                         fileReadError[sensor_id] = false
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error issue has been resolved", 1)
+                        em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error issue has been resolved", 0)
                         console.log(mutil.getTimeSensorHeader(sensor_id) + "File read error issue has been resolved.")
                     }
 
@@ -280,7 +291,8 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     
     // Data insertion
     for(var i = 1; i < fileLines.length; i++) {
-        insertIntoDBFromLine(sensor_id, fileLines[i], dataOffset, false)
+        insertIntoDBFromLine(sensor_id, fileLines[i], dataOffset)
+        publishDataMQTT(sensor_id, fileLines[i], dataOffset)
     }
 
     // Update table for the largest amount of bytes read for today's sensor data file
@@ -291,7 +303,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
             console.log(mutil.getTimeSensorHeader(sensor_id) 
                 + "Database error - An error occured while updating the largest amount of bytes read for today's sensor data file:\n" 
                 + err.message)
-            // mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+            // em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
             //     + "An error occured while updating the largest amount of bytes read for today's sensor data file: " 
             //     + err.message, 2)
         } else {
@@ -311,7 +323,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
 /*
     Inserts a line of data into the PostgreSQL database
 */
-function insertIntoDBFromLine(sensor_id, line, dataOffset, isFromMQTT) {
+function insertIntoDBFromLine(sensor_id, line, dataOffset) {
     const lineParts = line.split(',')
     if(lineParts[0] != null && lineParts[0] != '') {
         // Break the raw timestamp string into discernable parts so 
@@ -336,7 +348,7 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset, isFromMQTT) {
             }
             dataInsertionQuery += ") VALUES ($1, $2, $3,"
 
-            // Build remaining value parameters and insert them into the parameter array
+            // Build remaining value parameters and insert them into the parameter array and mqtt message
             var dataInsertionQueryParams = [timestampDateObj, sensor_id, lineParts[dataOffset[dataToUpdate[j]]]]
             var paramNum = 4
             for(var k = 0; k < dataToUpdateCommonParams.length; k++, paramNum++) {
@@ -354,9 +366,6 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset, isFromMQTT) {
             psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
                 if(err) {
                     console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                } else if(isFromMQTT) {
-                    // Note, this message may print three times because it is currently inserted into three different tables
-                    console.log(mutil.getTimeSensorHeader(sensor_id) + "Successfully inserted from MQTT into the database")
                 }
                 checkSensorDataLastUpdated(sensor_id)
             })
@@ -366,6 +375,46 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset, isFromMQTT) {
         updateSensorLocation(sensor_id, 
             lineParts[dataOffset[dataToUpdateCommonParams[1]]],
             lineParts[dataOffset[dataToUpdateCommonParams[0]]])
+    }
+}
+
+function publishDataMQTT(sensor_id, line, dataOffset) {
+    const lineParts = line.split(',')
+    if(lineParts[0] != null && lineParts[0] != '') {
+        // Append timestamp and sensor ID to MQTT message
+        var mqttDataMsg = "{\"dateTime\": \"" + lineParts[0].replace("T", " ") + "\"," +
+            "\"sensor_id\": " + sensor_id + ","
+
+        // Append PM data values
+        for(var j = 0; j < dataToUpdate.length; j++) {
+            mqttDataMsg += "\"" + dataToUpdate[j] + "\": " + lineParts[dataOffset[dataToUpdate[j]]] + ","
+        }
+        // Append other common values
+        for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
+            if(k == dataToUpdateCommonParams.length - 1) {
+                mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]]
+            } else {
+                mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]] + ","
+            }
+        }
+
+        mqttDataMsg += "}"
+        // Publish new data via MQTT
+        mqttClient.publish(sensor_id + "/" + mcfg.MQTT_TOPIC_SENSOR_DATA, mqttDataMsg, (err) => {
+            if(err) {
+                console.error(mutil.getTimeSensorHeader(sensor_id) 
+                    + "An error occured when attempting to publish data via MQTT: " + err.message)
+                if(!mqttPublishingError[sensor_id]) {
+                    mqttPublishingError = true
+                    em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                        + "An error occured when attempting to publish data via MQTT: " + err.message, 2)
+                }
+            }
+            if(mqttPublishingError[sensor_id]) {
+                mqttPublishingError = false
+                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "MQTT data publishing issue has been resolved", 0)
+            }
+        })
     }
 }
 
@@ -395,16 +444,16 @@ function checkSensorDataLastUpdated(sensor_id) {
         } else {
             if(res != null && res.rows[0] != null && res.rows[0].max != null) {
                 var retreivedTimestamp = Date.parse(res.rows[0].max)
-                if(retreivedTimestamp < (new Date()).getTime() - mcfg.EMAIL_NOTIFY_INACTIVE_THRESHOLD) {
+                if(retreivedTimestamp < (new Date()).getTime() - mcfg.EMAIL_NOTIFY_INACTIVE_THRESHOLD_1_HOUR) {
                     if(!outdatedSensor[sensor_id]) {
                         console.log(mutil.getTimeSensorHeader(sensor_id) + "No calibrated data from this sensor has been received in over an hour.")
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "No calibrated data from this sensor has been received in over an hour.", 2)
+                        em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "No calibrated data from this sensor has been received in over an hour.", 2)
                         outdatedSensor[sensor_id] = true
                     }
                 } else {
                     if(outdatedSensor[sensor_id]) {
                         console.log(mutil.getTimeSensorHeader(sensor_id) + "Calibrated data is now being received from this sensor.")
-                        mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "Calibrated data is now being received from this sensor.", 1)
+                        em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "Calibrated data is now being received from this sensor.", 0)
                         outdatedSensor[sensor_id] = false
                     }
                 }
@@ -412,6 +461,7 @@ function checkSensorDataLastUpdated(sensor_id) {
         }
     })
 }
+
 // Needed so functions can be imported in another script file 
 //   and called like an object method
 // Must remain on the bottom of script files

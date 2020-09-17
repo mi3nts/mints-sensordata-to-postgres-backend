@@ -1,6 +1,6 @@
 /*
 	mconfig.js
-	MINTS-BACKEND
+	MINTS-DATA-INGESTION-BACKEND
 
 	Contains configuration information such as directory paths.
     Edit this depending on the installation environment and your needs.
@@ -9,8 +9,15 @@
     Then rename the file to remove '-template'.
 */
 
-// Main MQTT broker address
+// Main MQTT broker address (use "mqtts://" if using SSL/TLS)
 const MQTT_BROKER_ADDRESS = 'mqtt://<MQTT Server Address (IP or Domain Name)>'
+
+// MQTT credentials (when using SSL/TLS)
+const MQTT_USERNAME = ''
+const MQTT_PASS = ''
+
+// MQTT Topic for calibrated/reference sensor data
+const MQTT_TOPIC_SENSOR_DATA = 'topic'
 
 // Main sensor directory path
 const SENSOR_DIRECTORY = '<path to where the sensor data folders are>'
@@ -22,7 +29,12 @@ const EMAIL_NOTIFICATION_ADDRESS = "<email to send notifications to, must enable
 const EMAIL_NOTIFICATION_PASS = "<password to email, probably will not work with 2FA>"
 
 // Amount of time since a sensor last updated its calibrated data
-const EMAIL_NOTIFY_INACTIVE_THRESHOLD = 3600000
+const EMAIL_NOTIFY_INACTIVE_THRESHOLD_1_HOUR = 360000
+const EMAIL_NOTIFY_INACTIVE_THRESHOLD_1_DAY = 86400000
+const EMAIL_NOTIFY_INACTIVE_THRESHOLD_2_WEEKS = 1209600000
+
+// Email notification subscribers (updated by query after script startup)
+var email_subscribers = ""
 
 // DO NOT EDIT THE FOLLOW BELOW THIS LINE FOR NOW /////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,11 +73,17 @@ const DATA_COLUMNS_COMMON_UPDATE = [
 
 module.exports = {
     MQTT_BROKER_ADDRESS,
+    MQTT_USERNAME,
+    MQTT_PASS,
+    MQTT_TOPIC_SENSOR_DATA,
     SENSOR_DIRECTORY,
     EMAIL_NOTIFICATION_ENABLE,
     EMAIL_NOTIFICATION_ADDRESS,
     EMAIL_NOTIFICATION_PASS,
-    EMAIL_NOTIFY_INACTIVE_THRESHOLD,
+    EMAIL_NOTIFY_INACTIVE_THRESHOLD_1_HOUR,
+    EMAIL_NOTIFY_INACTIVE_THRESHOLD_1_DAY,
+    EMAIL_NOTIFY_INACTIVE_THRESHOLD_2_WEEKS,
+    email_subscribers,
     DATA_COLUMNS_ALL,
     DATA_COLUMNS_TABLE_UPDATE,
     DATA_COLUMNS_COMMON_UPDATE

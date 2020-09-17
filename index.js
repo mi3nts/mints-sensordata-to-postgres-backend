@@ -1,6 +1,6 @@
 /*
     index.js
-    MINTS-BACKEND
+    MINTS-DATA-INGESTION-BACKEND
 
     Only for continuous backend services not user interaction.
     User interactable REST APIs are present for the purposes of debugging.
@@ -21,7 +21,13 @@ const schedule = require('node-schedule')
 
 const mutil = require('./util.js')
 const mcfg = require('./mconfig.js')
-const client  = mqtt.connect(mcfg.MQTT_BROKER_ADDRESS)
+const em = require('./emailNotify.js')
+
+const mqttClient  = mqtt.connect(mcfg.MQTT_BROKER_ADDRESS, {
+    clientId: 'mqttjs_mints_data_ingestion',
+    username: mcfg.MQTT_USERNAME,
+    password: mcfg.MQTT_PASS
+})
 
 var today
 var terminatedAdminCommandError = false
@@ -52,6 +58,8 @@ app.get('/update_meta', updm.updateSensorMetadata)
 app.get('/reset_read_count', updm.resetLargestReadToday)
 app.get('/toggle_sensor/:sensor_id', updm.toggleSensorForPublic) 
 app.get('/rename_sensor/:sensor_id/:sensor_name', updm.updateSensorName)
+app.get('/add_email_sub/:email', em.addEmailSubscribers)
+
 /*
     Routinely called "main" function for continuous operations
 */
@@ -68,21 +76,25 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
     // If its a new day and this is not done, there will be missing data
     if(now != today) {
         console.log(mutil.getTimeSensorHeader() + "Preparing to reset largest file size read (today: " + today + ", now: " + now + ")")
-        mutil.emailNotify(mutil.getTimeHeader() + "It is now a new day in UTC time.", 1)
+        em.emailNotify(mutil.getTimeHeader() + "It is now a new day in UTC time.", 1)
         updm.resetLargestReadToday()
         today = now
         // mutil.updateDateToday()
     }
     // Otherwise check for new sensor data and update the database
-    else upd.updateSensorData()
+    else {
+        upd.updateSensorData()
+        em.updateEmailSubscribers()
+    }
 });
 
 /*
     Where the script begins as soon as "node index.js" is run
 */
 app.listen(port, () => {
+    em.updateEmailSubscribers()
     console.log(mutil.getTimeHeader() + 'Server running on port ' + port + '.')
-    mutil.emailNotify(mutil.getTimeHeader() + "Sensor data ingestion script has started on port " + port + "." +
+    em.emailNotify(mutil.getTimeHeader() + "Sensor data ingestion script has started on port " + port + "." +
         "Please note that any issues raised in the past before this message are <b>not</b> remembered." + 
         "You may recieve notifications if previous issues are still not resolved." +
         "You will not recieve notifications for resolved issues.", 1)
@@ -97,19 +109,30 @@ app.listen(port, () => {
     Subscribe to MQTT topic(s) upon connection established to broker
 */
 /*
-client.on('connect', function () {
-    client.subscribe('sensordata', function (err) {
-        console.log(mutil.getTimeHeader() + 'MQTT subscription established')
+mqttClient.on('connect', function () {
+    mqttClient.subscribe('sensordata', function (err) {
+        if(err) {
+            console.log(mutil.getTimeHeader() + "Failed to establish mqtt subscription")
+        } else 
+            console.log(mutil.getTimeHeader() + 'MQTT subscription established')
     })
 })
 */
+
+mqttClient.on('error', function (error) {
+    console.log(mutil.getTimeHeader() + "Failed to establish mqtt connection: " + error.message)
+})
+
 /*
     Manage data received from MQTT respectively
 */
 /*
-client.on('message', function (topic, message) {
+mqttClient.on('message', function (topic, message) {
     if(topic.toString() == 'sensordata') {
         upd.updateSensorDataFromMQTT(message.toString())
+    }
+    if(topic.toString() == 'uncalibrated-sensordata') {
+        upd.updateRawSensorDataFromMQTT(message.toString())
     }
 })
 */
@@ -118,7 +141,7 @@ client.on('message', function (topic, message) {
     Notify for "normal" exit even though none exists right now and exit
 */
 process.on('exit', function () {
-    mutil.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor data processing server has stopped.", 0)
+    em.emailNotifyForShutdown(mutil.getTimeHeader() + "Sensor data processing server has stopped.", 0)
 })
 
 /*
@@ -127,13 +150,13 @@ process.on('exit', function () {
 process.on('SIGINT', function () {
     console.log(mutil.getTimeHeader() 
         + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.')
-    mutil.emailNotifyForShutdown(mutil.getTimeHeader() 
+    em.emailNotifyForShutdown(mutil.getTimeHeader() 
         + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.', 2)
 });
 process.on('SIGTERM', function () {
     console.log(mutil.getTimeHeader() 
         + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.')
-    mutil.emailNotifyForShutdown(mutil.getTimeHeader() 
+    em.emailNotifyForShutdown(mutil.getTimeHeader() 
         + 'Manual script shutdown was performed. Either an update is being performed or changes are being made that require the script to be offline.', 2)
 });
 /*
@@ -143,13 +166,13 @@ process.on('uncaughtException', function(err) {
     let message = ""
     if(!terminatedAdminCommandError && err.message == "terminating connection due to administrator command") {
         message = "Processing task was interrupted, likely due to system restart."
-        mutil.emailNotify(mutil.getTimeHeader() + message, 99)
+        em.emailNotify(mutil.getTimeHeader() + message, 99)
         terminatedAdminCommandError = true
     } else if(terminatedAdminCommandError && err.message == "terminating connection due to administrator command") {
         console.log("An email was already sent about a terminated connection.")
     } else {
         message = "UNCAUGHT EXCEPTION: " + err.message
-        mutil.emailNotify(mutil.getTimeHeader() + message, 99)
+        em.emailNotify(mutil.getTimeHeader() + message, 99)
     }
     console.log(mutil.getTimeHeader() + "UNCAUGHT EXCEPTION: " + err.stack)
 });

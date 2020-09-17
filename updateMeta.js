@@ -1,6 +1,6 @@
 /*
     updatesMeta.js
-    MINTS-BACKEND
+    MINTS-DATA-INGESTION-BACKEND
     
     Reads the column header of today's sensor data and updates the sensor metadata table
       in postgre.
@@ -11,6 +11,7 @@ const pgcon = require('./postgrescon.js')
 const fs = require('fs')
 const mutil = require('./util.js')
 const mcfg = require('./mconfig.js')
+const em = require('./emailNotify.js')
 
 // Postgre connector object and connection information
 const psql = new PSQL({
@@ -33,7 +34,7 @@ const updateSensorMetadata = () => {
                 console.log(mutil.getTimeHeader() 
                     + "Directory read error - While getting the list of sensors, the following error occured"
                     + "(Make sure you configured the sensor directory correctly in mconfig.js where SENSOR_DIRECTORY is):\n" + err.message)
-                mutil.emailNotify(mutil.getTimeHeader() 
+                em.emailNotify(mutil.getTimeHeader() 
                     + "Directory read error - While getting the list of sensors, the following error occured"
                     + "(Make sure you configured the sensor directory correctly in mconfig.js where SENSOR_DIRECTORY is):\n" + err.message, 2)
             } else {
@@ -61,14 +62,14 @@ function updateColOffsets(sensor_id) {
         if(err) {
             console.log(mutil.getTimeSensorHeader(sensor_id) 
                 + "File metadata read error - While updating column offsets, the following error occured:\n" + err.message)
-            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+            em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
                 + "File metadata read error - While updating column offsets, the following error occured:\n" + err.message, 2)
         } else {
             const fileSize = stat.size
             fs.open(fileName, 'r', function (err, fd) {
                 if(err) {
                     console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                    mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                    em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
                 } else {
                     // Allocate buffer based on the number of bytes we'll read
                     var fileBuffer = Buffer.alloc(fileSize)   
@@ -77,7 +78,7 @@ function updateColOffsets(sensor_id) {
                         if(err) {
                             console.log(mutil.getTimeSensorHeader(sensor_id) 
                                 + "File read error - While updating column offsets, the following read error occured:\n" + err.message)
-                            mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                            em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
                                 + "File read error - While updating column offsets, the following read error occured:\n" + err.message, 2)
                         } 
                         // Every single line in the file, although we are only focusing on one line only
@@ -116,7 +117,7 @@ function updateColOffsets(sensor_id) {
                             if(err) { 
                                 console.log(mutil.getTimeSensorHeader(sensor_id) 
                                     + "Database error - An error occured while updating sensor metadata on the database:\n" + err.message)
-                                mutil.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
                                     + "Database error - An error occured while updating sensor metadata on the database:\n" + err.message, 2)
                             }
                             console.log(mutil.getTimeSensorHeader(sensor_id) + "Finished updating sensor metadata")

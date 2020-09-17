@@ -1,4 +1,12 @@
 /*
+    dbsetupsub.sql
+    MINTS-DATA-INGESTION-BACKEND
+    
+    SQL queries to setup the subscriber database to sync with the related publisher database.
+    **Remember to fill out the information at the bottom.
+*/
+
+/*
     Setup main data tables
 */
 CREATE TABLE IF NOT EXISTS data_pm1 (
@@ -65,26 +73,8 @@ ALTER TABLE data_pm1 REPLICA IDENTITY FULL;
 ALTER TABLE data_pm2_5 REPLICA IDENTITY FULL;
 ALTER TABLE data_pm10 REPLICA IDENTITY FULL;
 
-/* 
-    Only the master database needs these indices in order to prevent duplicate rows/data.
-    The slave database should not have duplicated data as a result.
- */
-CREATE UNIQUE INDEX index_data_pm1 ON data_pm1(timestamp, sensor_id);
-CREATE UNIQUE INDEX index_data_pm2_5 ON data_pm2_5(timestamp, sensor_id);
-CREATE UNIQUE INDEX index_data_pm10 ON data_pm10(timestamp, sensor_id);
-
-/* 
-    Setting up master database publications
+/*
+    Needed to connect to the master database to replicate data
 */
-CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD 'teamlary';
-
-GRANT ALL PRIVILEGES ON DATABASE mints TO replicator;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO replicator;
-
-CREATE PUBLICATION mints_public;
-ALTER PUBLICATION mints_public ADD TABLE data_pm1;
-ALTER PUBLICATION mints_public ADD TABLE data_pm2_5;
-ALTER PUBLICATION mints_public ADD TABLE data_pm10;
-
-CREATE PUBLICATION mints_public_meta;
-ALTER PUBLICATION mints_public_meta ADD TABLE sensor_meta;
+CREATE SUBSCRIPTION mints_sync CONNECTION 'host=<master_ip> port=5432 password=teamlary user=replicator dbname=mints' PUBLICATION mints_public;
+CREATE SUBSCRIPTION mints_sync_meta CONNECTION 'host=<master_ip> port=5432 password=teamlary user=replicator dbname=mints' PUBLICATION mints_public_meta;

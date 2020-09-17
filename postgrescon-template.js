@@ -1,6 +1,6 @@
 /*
     postgrescon.js
-    MINTS-BACKEND
+    MINTS-DATA-INGESTION-BACKEND
 
     Contains important connection information for postgres
 
