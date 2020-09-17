@@ -242,6 +242,10 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
                 fileOpenError[sensor_id] = true
                 em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File open error - File failed to open:\n" + err.message, 2)
             } else console.log(mutil.getTimeSensorHeader(sensor_id) + "File open error - An email was already sent regarding this issue and remains unresolved.")
+            // Close file to prevent memory leak
+            fs.close(fd, function () {
+                // Do nothing
+            })
         } else {
             if(fileOpenError[sensor_id]) {
                 fileOpenError[sensor_id] = false
@@ -267,6 +271,10 @@ function openFile(fileName, fileSize, prevFileSize, sensor_id, dataOffset) {
                         fileReadError[sensor_id] = true
                         em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "File read error - Unable to read file:\n" + err.message, 2)
                     } else console.log(mutil.getTimeSensorHeader(sensor_id) + + "File read error - An email was already sent regarding this issue and remains unresolved.")
+                    // Close file to prevent memory leak
+                    fs.close(fd, function () {
+                        // Do nothing
+                    })
                 } else {
                     if(fileReadError[sensor_id]) {
                         fileReadError[sensor_id] = false
@@ -299,7 +307,12 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     //   mqtt messaging
     // This also resolves an issue with a large burst of messages when the script starts up since it
     //   would be reading the whole .csv instead of just the newer parts of the .csv
-    publishDataMQTT(sensor_id, fileLines[fileLines.length-1], dataOffset)
+    for(var i = fileLines.length-1; i > 0; i--) {
+        if(fileLines[i] != "") {
+            publishDataMQTT(sensor_id, fileLines[i], dataOffset)
+            break
+        }
+    }
 
     // Update table for the largest amount of bytes read for today's sensor data file
     const metaUpdateQuery = "INSERT INTO sensor_meta(sensor_id, largest_read) VALUES ($1, $2) ON CONFLICT (sensor_id) DO UPDATE SET largest_read = $2"
@@ -320,7 +333,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
         }
     })
 
-    // Close file to prevent memory leak
+    // Close file
     fs.close(fd, function () {
         // Do nothing
     })
@@ -385,42 +398,46 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset) {
 }
 
 function publishDataMQTT(sensor_id, line, dataOffset) {
-    const lineParts = line.split(',')
-    if(lineParts[0] != null && lineParts[0] != '') {
-        // Append timestamp and sensor ID to MQTT message
-        var mqttDataMsg = "{\"dateTime\": \"" + lineParts[0].replace("T", " ") + "\"," +
-            "\"sensor_id\": " + sensor_id + ","
-
-        // Append PM data values
-        for(var j = 0; j < dataToUpdate.length; j++) {
-            mqttDataMsg += "\"" + dataToUpdate[j] + "\": " + lineParts[dataOffset[dataToUpdate[j]]] + ","
-        }
-        // Append other common values
-        for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
-            if(k == dataToUpdateCommonParams.length - 1) {
-                mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]]
-            } else {
-                mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]] + ","
+    if(line != null) {
+        const lineParts = line.split(',')
+        if(lineParts[0] != null && lineParts[0] != '') {
+            // Append timestamp and sensor ID to MQTT message
+            var mqttDataMsg = "{\"dateTime\": \"" + lineParts[0].replace("T", " ") + "\"," +
+                "\"sensor_id\": " + sensor_id + ","
+    
+            // Append PM data values
+            for(var j = 0; j < dataToUpdate.length; j++) {
+                mqttDataMsg += "\"" + dataToUpdate[j] + "\": " + lineParts[dataOffset[dataToUpdate[j]]] + ","
             }
-        }
-
-        mqttDataMsg += "}"
-        // Publish new data via MQTT
-        mqttClient.publish(sensor_id + "/" + mcfg.MQTT_TOPIC_SENSOR_DATA, mqttDataMsg, (err) => {
-            if(err) {
-                console.error(mutil.getTimeSensorHeader(sensor_id) 
-                    + "An error occured when attempting to publish data via MQTT: " + err.message)
-                if(!mqttPublishingError[sensor_id]) {
-                    mqttPublishingError = true
-                    em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
-                        + "An error occured when attempting to publish data via MQTT: " + err.message, 2)
+            // Append other common values
+            for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
+                if(k == dataToUpdateCommonParams.length - 1) {
+                    mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]]
+                } else {
+                    mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]] + ","
                 }
             }
-            if(mqttPublishingError[sensor_id]) {
-                mqttPublishingError = false
-                em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "MQTT data publishing issue has been resolved", 0)
-            }
-        })
+    
+            mqttDataMsg += "}"
+            // Publish new data via MQTT
+            mqttClient.publish(sensor_id + "/" + mcfg.MQTT_TOPIC_SENSOR_DATA, mqttDataMsg, (err) => {
+                if(err) {
+                    console.error(mutil.getTimeSensorHeader(sensor_id) 
+                        + "An error occured when attempting to publish data via MQTT: " + err.message)
+                    if(!mqttPublishingError[sensor_id]) {
+                        mqttPublishingError = true
+                        em.emailNotify(mutil.getTimeSensorHeader(sensor_id) 
+                            + "An error occured when attempting to publish data via MQTT: " + err.message, 2)
+                    }
+                }
+                if(mqttPublishingError[sensor_id]) {
+                    mqttPublishingError = false
+                    em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + "MQTT data publishing issue has been resolved", 0)
+                }
+            })
+        }
+    } else {
+        console.log(mutil.getTimeSensorHeader(sensor_id) + "Got an undefined line while publishing for MQTT")
     }
 }
 
@@ -446,7 +463,7 @@ function checkSensorDataLastUpdated(sensor_id) {
     const queryParams = [sensor_id]
     psql.query(query, queryParams, (error, res) => {
         if(error) {
-            console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
+            console.error(mutil.getTimeSensorHeader(sensor_id) + error.message)
         } else {
             if(res != null && res.rows[0] != null && res.rows[0].max != null) {
                 var retreivedTimestamp = Date.parse(res.rows[0].max)

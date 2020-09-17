@@ -70,6 +70,10 @@ function updateColOffsets(sensor_id) {
                 if(err) {
                     console.log(mutil.getTimeSensorHeader(sensor_id) + err.message)
                     em.emailNotify(mutil.getTimeSensorHeader(sensor_id) + err.message, 2)
+                    // Close file to prevent memory leak
+                    fs.close(fd, function () {
+                        // Do nothing
+                    })
                 } else {
                     // Allocate buffer based on the number of bytes we'll read
                     var fileBuffer = Buffer.alloc(fileSize)   
