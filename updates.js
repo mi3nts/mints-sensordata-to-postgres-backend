@@ -403,7 +403,7 @@ function publishDataMQTT(sensor_id, line, dataOffset) {
         if(lineParts[0] != null && lineParts[0] != '') {
             // Append timestamp and sensor ID to MQTT message
             var mqttDataMsg = "{\"dateTime\": \"" + lineParts[0].replace("T", " ") + "\"," +
-                "\"sensor_id\": " + sensor_id + ","
+                "\"sensor_id\": \"" + sensor_id + "\","
     
             // Append PM data values
             for(var j = 0; j < dataToUpdate.length; j++) {
