@@ -349,10 +349,10 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset) {
         var timestampDateParts = lineParts[0].split(/[- :]/)
         var timestampDateObj = new Date(parseInt(timestampDateParts[0]),
                                         parseInt(timestampDateParts[1]) - 1,
-                                        parseInt(timestampDateParts[2].split("T")[0]),
-                                        parseInt(timestampDateParts[2].split("T")[1]),
+                                        parseInt(timestampDateParts[2]),
                                         parseInt(timestampDateParts[3]),
-                                        parseInt(timestampDateParts[4]))
+                                        parseInt(timestampDateParts[4]),
+                                        parseInt(timestampDateParts[5]))
             
         // Insert data into each main data tables
         for(var j = 0; j < dataToUpdate.length; j++) {

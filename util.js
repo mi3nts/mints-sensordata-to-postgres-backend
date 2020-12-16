@@ -44,7 +44,7 @@ const getSensorDataToday = (sensor_id) => {
 
     // Generate the file path and file name
     let sensorDataFilePath = mcfg.SENSOR_DIRECTORY + sensor_id + '/' + datePath + '/'
-    let sensorDataFilename = 'MINTS_' + sensor_id + '_calibrated_UTC_' + yearFull + '_' + monthFull + '_' + dayFull + '.csv'
+    let sensorDataFilename = 'MINTS_' + sensor_id + '_calibrated_' + yearFull + '_' + monthFull + '_' + dayFull + '.csv'
 
     // Return combined file path and file name
     return sensorDataFilePath + sensorDataFilename
