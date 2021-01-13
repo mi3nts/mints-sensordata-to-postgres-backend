@@ -298,7 +298,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     const fileLines = buffer.toString().split('\n')                   
     
     // Data insertion
-    for(var i = 1; i < fileLines.length; i++) {
+    for(var i = 0; i < fileLines.length; i++) {
         insertIntoDBFromLine(sensor_id, fileLines[i], dataOffset)
     }
 
