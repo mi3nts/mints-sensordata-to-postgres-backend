@@ -453,7 +453,7 @@ function updateSensorLocation(sensor_id, longitude, latitude) {
     const queryParams = [sensor_id, longitude, latitude, new Date()]
     psql.query(query, queryParams, (error, res) => {
         if(error) {
-            console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
+            console.error(mutil.getTimeSensorHeader(sensor_id) + error.message)
         }
     })
 }
