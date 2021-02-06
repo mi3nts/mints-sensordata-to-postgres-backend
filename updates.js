@@ -14,6 +14,8 @@ const mutil = require('./util.js')
 const mcfg = require('./mconfig.js')
 const em = require('./emailNotify.js')
 
+const dbconn = require('./dbconnector.js')
+
 const mqttClient = mqtt.connect(mcfg.MQTT_BROKER_ADDRESS, {
     clientId: 'mqttjs_mints_data_ingestion',
     username: mcfg.MQTT_USERNAME,
@@ -91,18 +93,6 @@ const updateSensorDataFromMQTT = function (message) {
 
             // Insert directly into the database
             insertIntoDBFromLine(sensor_id, dataLine, dataColOffset, true)
-        }
-    })
-}
-
-const updateSensorDataHistorical = function () {
-    // Get sensors ids in directory
-    fs.readdir(mcfg.SENSOR_DIRECTORY, function (err, files) {
-        if(err) {
-            console.log(mutil.getTimeHeader() + err.message)
-            em.emailNotify(mutil.getTimeHeader() + err.message, 2)
-        } else {
-            
         }
     })
 }
@@ -298,8 +288,11 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     const fileLines = buffer.toString().split('\n')                   
     
     // Data insertion
-    for(var i = 1; i < fileLines.length; i++) {
-        insertIntoDBFromLine(sensor_id, fileLines[i], dataOffset)
+    for(var i = 0; i < fileLines.length; i++) {
+        // Make sure an empty line or the data header is not being inserted
+        if(fileLines[i] != "" && fileLines[i].split(',')[0] != "dateTime") {
+            insertIntoDBFromLine(sensor_id, fileLines[i], dataOffset)
+        }
     }
 
     // Publish the latest available data since the .csv calibration outputs
@@ -307,8 +300,9 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
     //   mqtt messaging
     // This also resolves an issue with a large burst of messages when the script starts up since it
     //   would be reading the whole .csv instead of just the newer parts of the .csv
-    for(var i = fileLines.length-1; i > 0; i--) {
-        if(fileLines[i] != "") {
+    for(var i = fileLines.length-1; i >= 0; i--) {
+        // Make sure an empty line or the data header is not being published
+        if(fileLines[i] != "" && fileLines[i].split(',')[0] != "dateTime") {
             publishDataMQTT(sensor_id, fileLines[i], dataOffset)
             break
         }
@@ -345,50 +339,7 @@ function readDataFromCSVToDB(fd, sensor_id, dataOffset, bytesRead, prevFileSize,
 function insertIntoDBFromLine(sensor_id, line, dataOffset) {
     const lineParts = line.split(',')
     if(lineParts[0] != null && lineParts[0] != '') {
-        // Break the raw timestamp string into discernable parts so 
-        var timestampDateParts = lineParts[0].split(/[- :]/)
-        var timestampDateObj = new Date(parseInt(timestampDateParts[0]),
-                                        parseInt(timestampDateParts[1]) - 1,
-                                        parseInt(timestampDateParts[2]),
-                                        parseInt(timestampDateParts[3]),
-                                        parseInt(timestampDateParts[4]),
-                                        parseInt(timestampDateParts[5]))
-            
-        // Insert data into each main data tables
-        for(var j = 0; j < dataToUpdate.length; j++) {
-            // Initialize query statement
-            var dataInsertionQuery = "INSERT INTO data_" + dataToUpdate[j] + "(timestamp, sensor_id, value, "
-
-            // Build remaining column parameters
-            for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
-                if(k == dataToUpdateCommonParams.length - 1)
-                    dataInsertionQuery += dataToUpdateCommonParams[k]
-                else dataInsertionQuery += dataToUpdateCommonParams[k] + ", "
-            }
-            dataInsertionQuery += ") VALUES ($1, $2, $3,"
-
-            // Build remaining value parameters and insert them into the parameter array and mqtt message
-            var dataInsertionQueryParams = [timestampDateObj, sensor_id, lineParts[dataOffset[dataToUpdate[j]]]]
-            var paramNum = 4
-            for(var k = 0; k < dataToUpdateCommonParams.length; k++, paramNum++) {
-                if(k == dataToUpdateCommonParams.length - 1) {
-                    dataInsertionQuery += "$" + paramNum
-                    dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
-                } else {
-                    dataInsertionQuery += "$" + paramNum + ", "
-                    dataInsertionQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])
-                }
-            }
-            dataInsertionQuery += ") ON CONFLICT DO NOTHING;"
-
-            // Make insertion query
-            psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
-                if(err) {
-                    console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
-                }
-                checkSensorDataLastUpdated(sensor_id)
-            })
-        }
+        dbconn.insertMainData(sensor_id, lineParts, dataOffset)
 
         // Update sensor location
         updateSensorLocation(sensor_id, 
@@ -412,9 +363,15 @@ function publishDataMQTT(sensor_id, line, dataOffset) {
             // Append other common values
             for(var k = 0; k < dataToUpdateCommonParams.length; k++) {
                 if(k == dataToUpdateCommonParams.length - 1) {
-                    mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]]
+                    mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " 
+                        // Check for NaN or null
+                        + (lineParts[dataOffset[dataToUpdateCommonParams[k]]] == "NaN" || lineParts[dataOffset[dataToUpdateCommonParams[k]]] == "NaN" ? 
+                            "0" : lineParts[dataOffset[dataToUpdateCommonParams[k]]])
                 } else {
-                    mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " + lineParts[dataOffset[dataToUpdateCommonParams[k]]] + ","
+                    mqttDataMsg += "\"" + dataToUpdateCommonParams[k] + "\": " 
+                        // Check for NaN or null
+                        + (lineParts[dataOffset[dataToUpdateCommonParams[k]]] == "NaN" || lineParts[dataOffset[dataToUpdateCommonParams[k]]] == "NaN" ? 
+                            "0" : lineParts[dataOffset[dataToUpdateCommonParams[k]]]) + ","
                 }
             }
     

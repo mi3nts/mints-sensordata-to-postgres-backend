@@ -50,6 +50,22 @@ const getSensorDataToday = (sensor_id) => {
     return sensorDataFilePath + sensorDataFilename
 }
 
+/*
+    Generates specific path and file name for a sensor data file.
+    Year, month, and date numbers should be formatted as a string as such "00"/"01"/"11"
+*/
+const getSensorData = (sensor_id, year, month, day) => {
+    // Full date path for the sensor directory
+    let datePath = year + '/' + month + '/' + day
+    
+    // Generate the file path and file name
+    let sensorDataFilePath = mcfg.SENSOR_DIRECTORY + sensor_id + '/' + datePath + '/'
+    let sensorDataFilename = 'MINTS_' + sensor_id + '_calibrated_' + year + '_' + month + '_' + day + '.csv'
+
+    // Return combined file path and file name
+    return sensorDataFilePath + sensorDataFilename
+}
+
 const getTimeSensorHeader = (sensor_id) => {
     return "[" + (new Date()) + ", " + sensor_id + "]: "
 }
@@ -64,6 +80,7 @@ const getTimeHeader = () => {
 module.exports = {
     //getDateToday,
     //updateDateToday,
+    getSensorData,
     getSensorDataToday,
     getTimeSensorHeader,
     getTimeHeader
