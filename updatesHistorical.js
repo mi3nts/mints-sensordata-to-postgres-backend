@@ -36,19 +36,23 @@ const updateSensorDataHistorical = function (request, response) {
 function processData(dataFileSet) {
     for (var i = 0; i < dataFileSet.length; i++) {
         console.log("File to read: " + dataFileSet[i])
-        var data = fs.readFileSync(dataFileSet[i])
-        var dataLines = data.toString().split('\n')
-        console.log("Got " + dataLines.length + " lines of data including header")
-        var dataOffset = processDataHeader(dataLines[0])
+        try {
+            var data = fs.readFileSync(dataFileSet[i])
+            var dataLines = data.toString().split('\n')
+            console.log("Got " + dataLines.length + " lines of data including header")
+            var dataOffset = processDataHeader(dataLines[0])
 
-        var filePathParts = dataFileSet[i].split('/')
-        var sensor_id = filePathParts[filePathParts.length - 5]
+            var filePathParts = dataFileSet[i].split('/')
+            var sensor_id = filePathParts[filePathParts.length - 5]
 
-        for(var j = 1; j < dataLines.length; j++) {
-            const lineParts = dataLines[j].split(',')
-            if(lineParts[0] != null && lineParts[0] != '') {
-                dbconn.insertMainData(sensor_id, lineParts, dataOffset, null)
+            for(var j = 1; j < dataLines.length; j++) {
+                const lineParts = dataLines[j].split(',')
+                if(lineParts[0] != null && lineParts[0] != '') {
+                    dbconn.insertMainData(sensor_id, lineParts, dataOffset, null)
+                }
             }
+        } catch(e) {
+            console.log(mutil.getTimeHeader() + e)
         }
     }
 }
