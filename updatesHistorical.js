@@ -37,7 +37,8 @@ function processData(dataFileSet) {
     for (var i = 0; i < dataFileSet.length; i++) {
         console.log("File to read: " + dataFileSet[i])
         try {
-            var data = fs.readFileSync(dataFileSet[i])
+            var data = ""
+            var stream = fs.createReadStream(dataFileSet[i]).pipe(data)
             var dataLines = data.toString().split('\n')
             console.log("Got " + dataLines.length + " lines of data including header")
             var dataOffset = processDataHeader(dataLines[0])
@@ -51,8 +52,9 @@ function processData(dataFileSet) {
                     dbconn.insertMainData(sensor_id, lineParts, dataOffset, null)
                 }
             }
+            stream.end()
         } catch(e) {
-            console.log(mutil.getTimeHeader() + e)
+            error.log(mutil.getTimeHeader + "An error occured attempting to read the file " + dataFileSet[i])
         }
     }
 }
