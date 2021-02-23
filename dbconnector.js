@@ -63,9 +63,16 @@ const insertMainData = function(sensor_id, dataParts, dataOffset, callback) {
             + dataUpdateQuery + ";"
         
         // Make insertion query
-        psql.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
-            if(err) {
+        psql.connect((err, client, done) => {
+            if (err) {
                 console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
+            } else {
+                client.query(dataInsertionQuery, dataInsertionQueryParams, (err, res) => {
+                    done()
+                    if(err) {
+                        console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)
+                    }
+                })
             }
         })
     }
