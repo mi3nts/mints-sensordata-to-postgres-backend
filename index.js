@@ -179,7 +179,7 @@ process.on('uncaughtException', function(err) {
         console.log("An email was already sent about a terminated connection.")
     } else {
         message = "UNCAUGHT EXCEPTION: " + err.message
-        em.emailNotify(mutil.getTimeHeader() + message, 99)
+        //em.emailNotify(mutil.getTimeHeader() + message, 99)
     }
     console.log(mutil.getTimeHeader() + "UNCAUGHT EXCEPTION: " + err.stack)
 });

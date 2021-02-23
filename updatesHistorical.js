@@ -5,7 +5,6 @@ const pgcon = require('./postgrescon.js')
 const fs = require('fs')
 const mutil = require('./util.js')
 const mcfg = require('./mconfig.js')
-const em = require('./emailNotify.js')
 
 const dbconn = require('./dbconnector.js')
 
@@ -37,13 +36,26 @@ function processData(dataFileSet) {
     for (var i = 0; i < dataFileSet.length; i++) {
         console.log("File to read: " + dataFileSet[i])
         try {
-            var data = ""
-            var stream = fs.createReadStream(dataFileSet[i]).pipe(data)
-            var dataLines = data.toString().split('\n')
-            console.log("Got " + dataLines.length + " lines of data including header")
-            var dataOffset = processDataHeader(dataLines[0])
+            processDataFile(dataFileSet[i])
+        } catch(e) {
+            console.error(mutil.getTimeHeader() + "An error occured attempting to read the file " + dataFileSet[i])
+        }
+    }
+}
 
-            var filePathParts = dataFileSet[i].split('/')
+function processDataFile(file) {
+    var stream = fs.createReadStream(file)
+    var data = ''
+    stream.on('data', (chunk) => {
+        data += chunk
+    })
+
+    stream.on('end', () => {
+        if(data != '') {
+            var dataLines = data.toString().split('\n')
+            console.log(mutil.getTimeHeader() + stream.path + ": Got " + dataLines.length + " lines of data including header")
+            var dataOffset = processDataHeader(dataLines[0])
+            var filePathParts = stream.path.split('/')
             var sensor_id = filePathParts[filePathParts.length - 5]
 
             for(var j = 1; j < dataLines.length; j++) {
@@ -52,13 +64,9 @@ function processData(dataFileSet) {
                     dbconn.insertMainData(sensor_id, lineParts, dataOffset, null)
                 }
             }
-            stream.end()
-        } catch(e) {
-            error.log(mutil.getTimeHeader + "An error occured attempting to read the file " + dataFileSet[i])
         }
-    }
+    })
 }
-
 function processDataHeader(dataHeaderLine) {
     // Finding the column index for the data we want
     var dataHeaders = dataHeaderLine.split(',')
