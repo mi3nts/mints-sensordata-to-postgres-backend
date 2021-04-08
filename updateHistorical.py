@@ -17,24 +17,24 @@ def listHistoricalData():
     return dataFiles
 
 def processDataFiles(dataFiles):
-
-    sqlStatements = []
-    sqlQueryParams = []
-
     for file in dataFiles:
         csvData = open(file, 'r')
-        csvDataLines = csvData.readlines()
-        csvData.close()
 
         lineNo = 0
+
         dataOffsets = {}
         dataValues = {}
         dataValid = True
 
+        sqlStatements = []
+        sqlQueryParams = []
+
         fileParts = file.split('/')
         print("[{}]: Processing...".format(fileParts[len(fileParts) - 1]))
+
         sensor_id = fileParts[len(fileParts) - 5]
-        for line in csvDataLines:
+        
+        for line in csvData:
             # If CSV data is corrupted/unreadable
             if not dataValid:
                 continue
@@ -122,24 +122,24 @@ def processDataFiles(dataFiles):
                     sqlQueryParams.append(queryParamsFinal)
 
             lineNo += 1
+        csvData.close()
 
-    return sqlStatements, sqlQueryParams
+        # Insert data
+        dbconnector.insertBulkQuery(sqlStatements, sqlQueryParams)
+
         
 
 def main():
     startTime = time.time() * 1000
     dataFiles = listHistoricalData()
-    print('[1/4] Done searching for data files')
+    print('[1/3] Done searching for data files')
     for file in dataFiles:
         print("    +- Found data file: {}".format(file))
     
-    print('[2/4] Processing files to prepare SQL statements...')
-    sqlStatements, sqlQueryParams = processDataFiles(dataFiles)
+    print('[2/3] Updating data...')
+    processDataFiles(dataFiles)
 
-    print("[3/4] Finished preparing SQL statements, proceeding to send queries to database")
-    dbconnector.insertBulkQuery(sqlStatements, sqlQueryParams)
-
-    print("[4/4] Finished updating historical data!")
+    print("[3/3] Finished updating historical data!")
     print("Operation took {} ms".format(round((time.time()*1000) - startTime)))
 
 main()
