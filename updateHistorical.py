@@ -1,5 +1,7 @@
 import dbconnector
 import config as cfg
+
+import time
 import os
 
 def listHistoricalData():
@@ -9,7 +11,8 @@ def listHistoricalData():
             for monthFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/'):
                 for dayFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/'):
                     for file in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/' + dayFile + '/'):
-                        dataFiles.append('{}{}/{}/{}/{}/{}'.format(cfg.SENSOR_DATA_DIRECTORY, sensorFile, yearFile, monthFile, dayFile, file))
+                        if(file.find("_calibrated") != -1):
+                            dataFiles.append('{}{}/{}/{}/{}/{}'.format(cfg.SENSOR_DATA_DIRECTORY, sensorFile, yearFile, monthFile, dayFile, file))
     
     return dataFiles
 
@@ -21,15 +24,21 @@ def processDataFiles(dataFiles):
     for file in dataFiles:
         csvData = open(file, 'r')
         csvDataLines = csvData.readlines()
+        csvData.close()
 
         lineNo = 0
         dataOffsets = {}
         dataValues = {}
+        dataValid = True
 
         fileParts = file.split('/')
         print("[{}]: Processing...".format(fileParts[len(fileParts) - 1]))
         sensor_id = fileParts[len(fileParts) - 5]
         for line in csvDataLines:
+            # If CSV data is corrupted/unreadable
+            if not dataValid:
+                continue
+
             # Process CSV data headers
             if lineNo == 0:
                 sanitizedLine = line.replace('\n','')
@@ -52,6 +61,10 @@ def processDataFiles(dataFiles):
                             dataOffsets[dataHeader] = col
                             break
                         col += 1
+                    if(dataOffsets.get(dataHeader) == None):
+                        print("[{}]:    +- Could not find required data headers for {}. Data is not imported!".format(fileParts[len(fileParts) - 1], dataHeader))
+                        dataValid = False
+                        break
 
             # Process data with reference to headers
             else:
@@ -114,6 +127,7 @@ def processDataFiles(dataFiles):
         
 
 def main():
+    startTime = time.time() * 1000
     dataFiles = listHistoricalData()
     print('[1/4] Done searching for data files')
     for file in dataFiles:
@@ -126,5 +140,6 @@ def main():
     dbconnector.insertBulkQuery(sqlStatements, sqlQueryParams)
 
     print("[4/4] Finished updating historical data!")
+    print("Operation took {} ms".format(round((time.time()*1000) - startTime)))
 
 main()

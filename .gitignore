@@ -3,3 +3,5 @@ node_modules/*
 sensorData/*
 mconfig.js
 postgrescon.js
+dbconnector.py
+config.py

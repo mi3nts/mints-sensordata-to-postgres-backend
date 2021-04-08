@@ -1,4 +1,4 @@
-SENSOR_DATA_DIRECTORY = "/data/mintsdata/results/"
+SENSOR_DATA_DIRECTORY = "<directory>"
 
 DATA_COLUMNS_ALL = [
 	"PM1",

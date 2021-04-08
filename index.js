@@ -16,7 +16,6 @@ const app = express()
 const port = 3200
 
 const upd = require('./updates.js')
-const updh = require('./updatesHistorical.js')
 const updm = require('./updateMeta.js')
 const schedule = require('node-schedule')
 
@@ -50,8 +49,7 @@ app.get('/', (request, response) => {
 
 // REST API calls
 // Call to update sensor data manually
-app.get('/update', upd.updateSensorDataManual)   
-app.get('/updateHistorical', updh.updateSensorDataHistorical)       
+app.get('/update', upd.updateSensorDataManual)       
 
 // Call to update sensor metadata manually 
 // This needs to be done if a new sensor is added or if any of the column 
@@ -89,11 +87,6 @@ schedule.scheduleJob('*/5 * * * * *', function(fireDate) {
         em.updateEmailSubscribers()
     }
 });
-
-schedule.scheduleJob('0 0 0 * * 0', function(fireDate) {
-    console.log(mutil.getTimeSensorHeader() + "Updating historical data")
-    updh.updateSensorDataHistorical()
-})
 
 /*
     Where the script begins as soon as "node index.js" is run
