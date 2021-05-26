@@ -7,12 +7,17 @@ import os
 def listHistoricalData():
     dataFiles = []
     for sensorFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY):
-        for yearFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/'):
-            for monthFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/'):
-                for dayFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/'):
-                    for file in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/' + dayFile + '/'):
-                        if(file.find("_calibrated") != -1):
-                            dataFiles.append('{}{}/{}/{}/{}/{}'.format(cfg.SENSOR_DATA_DIRECTORY, sensorFile, yearFile, monthFile, dayFile, file))
+        if os.path.isdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile):
+            for yearFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/'):
+                if os.path.isdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile):
+                    for monthFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/'):
+                        if os.path.isdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile):
+                            for dayFile in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/'):
+                                if os.path.isdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/' + dayFile):
+                                    for file in os.listdir(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/' + dayFile + '/'):
+                                        if os.path.isfile(cfg.SENSOR_DATA_DIRECTORY + sensorFile + '/' + yearFile + '/' + monthFile + '/' + dayFile + '/' + file):
+                                            if(file.find("_calibrated") != -1):
+                                                dataFiles.append('{}{}/{}/{}/{}/{}'.format(cfg.SENSOR_DATA_DIRECTORY, sensorFile, yearFile, monthFile, dayFile, file))
     
     return dataFiles
 
