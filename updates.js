@@ -342,9 +342,7 @@ function insertIntoDBFromLine(sensor_id, line, dataOffset) {
         dbconn.insertMainData(sensor_id, lineParts, dataOffset)
 
         // Update sensor location
-        updateSensorLocation(sensor_id, 
-            lineParts[dataOffset[dataToUpdateCommonParams[1]]],
-            lineParts[dataOffset[dataToUpdateCommonParams[0]]])
+        updateSensorMetaWithLatestData(sensor_id, lineParts, dataOffset)
     }
 }
 
@@ -397,26 +395,92 @@ function publishDataMQTT(sensor_id, line, dataOffset) {
         console.log(mutil.getTimeSensorHeader(sensor_id) + "Got an undefined line while publishing for MQTT")
     }
 }
-
-function updateSensorLocation(sensor_id, longitude, latitude) {
-    if(longitude == 'NaN' || latitude == 'NaN' || longitude == null || latitude == null) {
-        console.error(mutil.getTimeSensorHeader(sensor_id) 
-            + "Could not update location due to longitude: " + longitude + ", latitude: " + latitude
-            + " being possibily null or NaN")
-        
-        return
-    }
-    const query = "UPDATE sensor_meta SET longitude = $2, latitude = $3, last_updated = $4 WHERE sensor_id = $1"
-    const queryParams = [sensor_id, longitude, latitude, new Date()]
-    psql.query(query, queryParams, (error, res) => {
-        if(error) {
-            console.error(mutil.getTimeSensorHeader(sensor_id) + error.message)
-        }
-    })
+		
+function updateSensorMetaWithLatestData(sensor_id, lineParts, dataOffset) {	
+    if(lineParts[0] != null && lineParts[0] != '') {	
+        // Break the raw timestamp string into discernable parts so 	
+        var timestampDateParts = lineParts[0].split(/[- :]/)	
+        var timestampDateObj = new Date(parseInt(timestampDateParts[0]),	
+                                        parseInt(timestampDateParts[1]) - 1,	
+                                        parseInt(timestampDateParts[2]),	
+                                        parseInt(timestampDateParts[3]),	
+                                        parseInt(timestampDateParts[4]),	
+                                        parseInt(timestampDateParts[5]))	
+        	
+        // Update sensor meta table with latest data	
+        var sensorMetaUpdateQuery = "UPDATE sensor_meta SET latest_data_timestamp = $1, "	
+        var sensorMetaUpdateQueryParams = [timestampDateObj]	
+        var paramNum = 2	
+        // Build update query for main data tables	
+        for(var k = 0; k < dataToUpdate.length; k++, paramNum++) {	
+            sensorMetaUpdateQuery += "latest_" + dataToUpdate[k] + " = $" + paramNum + ", ";	
+            sensorMetaUpdateQueryParams.push(lineParts[dataOffset[dataToUpdate[k]]])	
+        }	
+        // Build common update queries	
+        var locationAlreadyUpdating = false	
+        var doNotUpdateLocation = false	
+        for(var k = 0; k < dataToUpdateCommonParams.length; k++, paramNum++) {	
+            if((dataToUpdateCommonParams[k] == "latitude" || dataToUpdateCommonParams[k] == "longitude") && doNotUpdateLocation) {	
+                // Do not update if this is true, skip the loop	
+                console.error(mutil.getTimeSensorHeader(sensor_id) 	
+                    + "Skipping longitude/latitude update due to the other being NaN or NULL")	
+                paramNum--; // Ensure paramNum consistency, we didn't update, so it should be the same after the loop	
+                continue;	
+            } else if((dataToUpdateCommonParams[k] == "latitude" || dataToUpdateCommonParams[k] == "longitude")	
+                && (lineParts[dataOffset[dataToUpdateCommonParams[k]]] == "NaN" || lineParts[dataOffset[dataToUpdateCommonParams[k]]] == null)) {	
+                    // Do not update if this is true, skip the loop	
+                    console.error(mutil.getTimeSensorHeader(sensor_id) 	
+                        + "Could not update location due to longitude or latitude being possibily null or NaN (Received: " 	
+                        + lineParts[dataOffset[dataToUpdateCommonParams[k]]] + ")")	
+                    doNotUpdateLocation = true;	
+                    paramNum--; // Ensure paramNum consistency, we didn't update, so it should be the same after the loop	
+                    continue;	
+            } else if(!locationAlreadyUpdating && (dataToUpdateCommonParams[k] == "latitude" || dataToUpdateCommonParams[k] == "longitude")) {	
+                // The last updated location parameter only needs to be updated once.	
+                // We are checking for both latitude and longitude however, so we want to make sure this is done once or else	
+                //   the database system will throw an error	
+                sensorMetaUpdateQuery += "location_last_upd = $" + paramNum++ + ", ";	
+                sensorMetaUpdateQueryParams.push(new Date())	
+                locationAlreadyUpdating = true	
+            }	
+            // Build other column query
+            if(k == dataToUpdateCommonParams.length - 1) {	
+                sensorMetaUpdateQuery += "latest_" + dataToUpdateCommonParams[k] + " = $" + paramNum + " ";	
+            } else {	
+                sensorMetaUpdateQuery += "latest_" + dataToUpdateCommonParams[k] + " = $" + paramNum + ", ";	
+            }	
+            sensorMetaUpdateQueryParams.push(lineParts[dataOffset[dataToUpdateCommonParams[k]]])	
+        }	
+        sensorMetaUpdateQuery += "WHERE sensor_id = $" + paramNum + ";"	
+        sensorMetaUpdateQueryParams.push(sensor_id)	
+        psql.query(sensorMetaUpdateQuery, sensorMetaUpdateQueryParams, (err, res) => {	
+            if(err) {	
+                console.error(mutil.getTimeSensorHeader(sensor_id) + err.message)	
+                console.log(sensorMetaUpdateQuery);	
+            }	
+        })	
+    }	
 }
 
+// function updateSensorLocation(sensor_id, longitude, latitude) {
+//     if(longitude == 'NaN' || latitude == 'NaN' || longitude == null || latitude == null) {
+//         console.error(mutil.getTimeSensorHeader(sensor_id) 
+//             + "Could not update location due to longitude: " + longitude + ", latitude: " + latitude
+//             + " being possibily null or NaN")
+        
+//         return
+//     }
+//     const query = "UPDATE sensor_meta SET latest_longitude = $2, latest_latitude = $3, location_last_upd = $4 WHERE sensor_id = $1"
+//     const queryParams = [sensor_id, longitude, latitude, new Date()]
+//     psql.query(query, queryParams, (error, res) => {
+//         if(error) {
+//             console.error(mutil.getTimeSensorHeader(sensor_id) + error.message)
+//         }
+//     })
+// }
+
 function checkSensorDataLastUpdated(sensor_id) {
-    const query = "SELECT MAX(timestamp) FROM data_pm2_5 WHERE sensor_id = $1"
+    const query = "SELECT MAX(latest_data_timestamp) FROM sensor_meta WHERE sensor_id = $1"
     const queryParams = [sensor_id]
     psql.query(query, queryParams, (error, res) => {
         if(error) {

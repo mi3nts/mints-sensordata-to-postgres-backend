@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS data_pm1 (
     humidity double precision,
     temperature double precision,
     pressure double precision,
-    dewpoint double precision
+    dewpoint double precision,
+    calibration_ver INT
 );
 
 CREATE TABLE IF NOT EXISTS data_pm2_5 (
@@ -30,7 +31,8 @@ CREATE TABLE IF NOT EXISTS data_pm2_5 (
     humidity double precision,
     temperature double precision,
     pressure double precision,
-    dewpoint double precision
+    dewpoint double precision,
+    calibration_ver INT
 );
 
 CREATE TABLE IF NOT EXISTS data_pm10 (
@@ -42,19 +44,18 @@ CREATE TABLE IF NOT EXISTS data_pm10 (
     humidity double precision,
     temperature double precision,
     pressure double precision,
-    dewpoint double precision
+    dewpoint double precision,
+    calibration_ver INT
 );
 /*
     Setup table used for gathering information about how to read the csv files.
-    On the slave database, it is useful in providing a list and indicating whether or not the sensor
+    On the subscriber database, it is useful in providing a list and indicating whether or not the sensor
       is ready for the public.
 */
 CREATE TABLE IF NOT EXISTS sensor_meta (
     sensor_id VARCHAR(20) UNIQUE,
     sensor_name VARCHAR(120),
     allow_public BOOLEAN,
-    longitude double precision,
-    latitude double precision,
     largest_read INT,
     col_offset_longitude INT,
     col_offset_latitude INT,
@@ -65,7 +66,17 @@ CREATE TABLE IF NOT EXISTS sensor_meta (
     col_offset_temperature INT,
     col_offset_humidity INT,
     col_offset_dewpoint INT,
-    last_updated TIMESTAMP
+    location_last_upd TIMESTAMP,
+    latest_longitude double precision,
+    latest_latitude double precision,
+    latest_data_timestamp TIMESTAMP,
+    latest_pm1 double precision,
+    latest_pm2_5 double precision,
+    latest_pm10 double precision,
+    latest_temperature double precision,
+    latest_humidity double precision,
+    latest_pressure double precision,
+    latest_dewpoint double precision
 );
 
 /* Needed for replication */

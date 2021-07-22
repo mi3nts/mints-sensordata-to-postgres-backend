@@ -101,6 +101,7 @@ app.listen(port, () => {
     updm.resetLargestReadToday()
     
     today = (new Date()).getUTCDate()
+    console.log("Updating sensor meta")
     updm.updateSensorMetadata()
 })
 
